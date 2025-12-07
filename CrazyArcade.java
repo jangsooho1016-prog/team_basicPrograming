@@ -99,14 +99,14 @@ public class CrazyArcade extends JFrame {
             this.id = id;
         }
     }
-    
+
     static class MenuPanel extends JPanel {
         private CrazyArcade game;
 
         public MenuPanel(CrazyArcade game) {
             this.game = game;
             setPreferredSize(new Dimension(600, 520));
-            setBackground(new Color(240, 248, 255)); // AliceBlue
+            setBackground(new Color(240, 248, 255));
             setLayout(null);
 
             JLabel titleLabel = new JLabel("Crazy Arcade");
@@ -152,9 +152,8 @@ public class CrazyArcade extends JFrame {
             title.setBounds(180, 20, 300, 50);
             add(title);
 
-          
             createSelectionArea(50, 100, "플레이어 1 (WASD)", 1);
-           
+
             createSelectionArea(320, 100, "플레이어 2 (방향키)", 2);
 
             JButton nextBtn = new JButton("맵 선택으로");
@@ -304,11 +303,10 @@ public class CrazyArcade extends JFrame {
             for (int i = 0; i < MAP_HEIGHT; i++) {
                 for (int j = 0; j < MAP_WIDTH; j++) {
                     if (i == 0 || i == MAP_HEIGHT - 1 || j == 0 || j == MAP_WIDTH - 1) {
-                        map[i][j] = 1; // Unbreakable Wall
+                        map[i][j] = 1;
                     } else if (i % 2 == 0 && j % 2 == 0) {
-                        map[i][j] = 1; // Unbreakable Wall
+                        map[i][j] = 1;
                     } else {
-                        // Safe zone
                         if ((i <= 2 && j <= 2) || (i >= MAP_HEIGHT - 3 && j >= MAP_WIDTH - 3)) {
                             map[i][j] = 0;
                             continue;
@@ -318,23 +316,22 @@ public class CrazyArcade extends JFrame {
                         switch (mapType) {
                             case 1:
                                 blockRate = 0.5;
-                                break; // Basic
-                            case 2: // Maze-like
+                                break;
+                            case 2:
                                 if ((i % 4 == 1 && j % 3 == 0) || (j % 4 == 1 && i % 3 == 0))
                                     map[i][j] = 2;
                                 continue;
                             case 3:
                                 blockRate = 0.2;
-                                break; // Open
+                                break;
                             case 4:
                                 blockRate = 0.4;
-                                break; // Symmetric
+                                break;
                         }
 
                         if (Math.random() < blockRate)
-                            map[i][j] = 2; // Breakable Block
+                            map[i][j] = 2;
                         if (mapType == 4 && map[i][j] == 2) {
-                            // Mirror for symmetric map
                             map[i][MAP_WIDTH - 1 - j] = 2;
                         }
                     }
@@ -365,7 +362,6 @@ public class CrazyArcade extends JFrame {
             player1.update(map, bombs, items);
             player2.update(map, bombs, items);
 
-            // Update Bombs
             for (int i = bombs.size() - 1; i >= 0; i--) {
                 Bomb bomb = bombs.get(i);
                 bomb.update();
@@ -375,7 +371,6 @@ public class CrazyArcade extends JFrame {
                 }
             }
 
-            // Update Explosions
             for (int i = explosions.size() - 1; i >= 0; i--) {
                 Explosion exp = explosions.get(i);
                 exp.update();
@@ -384,7 +379,6 @@ public class CrazyArcade extends JFrame {
                 }
             }
 
-            // Update Items
             for (int i = items.size() - 1; i >= 0; i--) {
                 Item item = items.get(i);
                 item.update();
@@ -393,12 +387,25 @@ public class CrazyArcade extends JFrame {
                 }
             }
 
-            // Check Player Death
             for (Explosion exp : explosions) {
-                if (exp.hits(player1.x, player1.y) && !player1.hasShield)
-                    player1.alive = false;
-                if (exp.hits(player2.x, player2.y) && !player2.hasShield)
-                    player2.alive = false;
+                if (exp.hits(player1.x, player1.y)) {
+                    if (player1.invincibleTimer > 0) {
+                    } else if (player1.hasShield) {
+                        player1.hasShield = false;
+                        player1.invincibleTimer = 60;
+                    } else {
+                        player1.alive = false;
+                    }
+                }
+                if (exp.hits(player2.x, player2.y)) {
+                    if (player2.invincibleTimer > 0) {
+                    } else if (player2.hasShield) {
+                        player2.hasShield = false;
+                        player2.invincibleTimer = 60;
+                    } else {
+                        player2.alive = false;
+                    }
+                }
             }
         }
 
@@ -414,14 +421,13 @@ public class CrazyArcade extends JFrame {
 
                     if (nx < 0 || nx >= MAP_WIDTH || ny < 0 || ny >= MAP_HEIGHT)
                         break;
-                    if (map[ny][nx] == 1) // Unbreakable
+                    if (map[ny][nx] == 1)
                         break;
 
                     explosions.add(new Explosion(nx, ny));
 
-                    if (map[ny][nx] == 2) { // Breakable
+                    if (map[ny][nx] == 2) {
                         map[ny][nx] = 0;
-                        // Chance to spawn item
                         if (Math.random() < 0.3) {
                             ItemType type = ItemType.values()[(int) (Math.random() * ItemType.values().length)];
                             items.add(new Item(nx, ny, type));
@@ -436,7 +442,6 @@ public class CrazyArcade extends JFrame {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
 
-            // Draw Map
             for (int i = 0; i < MAP_HEIGHT; i++) {
                 for (int j = 0; j < MAP_WIDTH; j++) {
                     int x = j * TILE_SIZE;
@@ -448,7 +453,7 @@ public class CrazyArcade extends JFrame {
                         g.setColor(Color.GRAY);
                         g.drawRect(x, y, TILE_SIZE, TILE_SIZE);
                     } else if (map[i][j] == 2) {
-                        g.setColor(new Color(210, 105, 30)); // Chocolate
+                        g.setColor(new Color(210, 105, 30));
                         g.fillRect(x, y, TILE_SIZE, TILE_SIZE);
                         g.setColor(new Color(139, 69, 19));
                         g.drawRect(x, y, TILE_SIZE, TILE_SIZE);
@@ -571,6 +576,8 @@ public class CrazyArcade extends JFrame {
         int skillDuration = 0;
         boolean skillActive = false;
 
+        int invincibleTimer = 0;
+
         public Player(int x, int y, CharacterType type, int up, int down, int left, int right, int bomb, int skill) {
             this.x = x;
             this.y = y;
@@ -592,13 +599,15 @@ public class CrazyArcade extends JFrame {
             if (!alive)
                 return;
 
+            if (invincibleTimer > 0)
+                invincibleTimer--;
+
             if (skillCooldown > 0)
                 skillCooldown--;
             if (skillActive) {
                 skillDuration--;
                 if (skillDuration <= 0) {
                     skillActive = false;
-                    // Reset stats if needed (balanced type)
                     if (characterType == CharacterType.BALANCED) {
                         speed /= 1.3;
                         bombRange -= 1;
@@ -703,8 +712,8 @@ public class CrazyArcade extends JFrame {
         private void useSkill() {
             if (skillCooldown > 0)
                 return;
-            skillCooldown = 300; // 5 seconds
-            skillDuration = 180; // 3 seconds
+            skillCooldown = 300;
+            skillDuration = 180;
             skillActive = true;
 
             switch (characterType) {
@@ -719,18 +728,21 @@ public class CrazyArcade extends JFrame {
                     bombRange += 1;
                     break;
                 case SPEED:
-                    break; // Handled in update
+                    break;
             }
         }
 
         public void draw(Graphics g) {
             g.setColor(characterType.color);
-            g.fillOval(x * 40 + 5, y * 40 + 5, 30, 30);
+            if (invincibleTimer > 0 && (invincibleTimer / 5) % 2 == 0) {
+            } else {
+                g.fillOval(x * 40 + 5, y * 40 + 5, 30, 30);
+            }
+
             if (hasShield) {
                 g.setColor(new Color(0, 255, 255, 100));
                 g.drawOval(x * 40 + 2, y * 40 + 2, 36, 36);
             }
-            // Eyes
             g.setColor(Color.WHITE);
             g.fillOval(x * 40 + 12, y * 40 + 12, 6, 6);
             g.fillOval(x * 40 + 22, y * 40 + 12, 6, 6);
@@ -831,4 +843,3 @@ public class CrazyArcade extends JFrame {
         }
     }
 }
-
