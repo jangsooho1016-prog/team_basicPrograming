@@ -20,12 +20,10 @@ public class CrazyArcade extends JFrame {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
-        // Initialize Panels
         menuPanel = new MenuPanel(this);
         charSelectionPanel = new CharacterSelectionPanel(this);
         mapSelectionPanel = new MapSelectionPanel(this);
 
-        // Add Panels to CardLayout
         mainPanel.add(menuPanel, "MENU");
         mainPanel.add(charSelectionPanel, "CHAR_SELECT");
         mainPanel.add(mapSelectionPanel, "MAP_SELECT");
@@ -64,11 +62,6 @@ public class CrazyArcade extends JFrame {
         SwingUtilities.invokeLater(CrazyArcade::new);
     }
 
-    // ==========================================
-    // INNER CLASSES (Merged from separate files)
-    // ==========================================
-
-    // Enables/Disables, Stats
     enum CharacterType {
         SPEED(Color.CYAN, "스피드", 0.15, 2, 1),
         POWER(Color.RED, "파워", 0.08, 3, 1),
@@ -106,8 +99,7 @@ public class CrazyArcade extends JFrame {
             this.id = id;
         }
     }
-
-    // --- MILESTONE 1: MENU ---
+    
     static class MenuPanel extends JPanel {
         private CrazyArcade game;
 
@@ -143,7 +135,6 @@ public class CrazyArcade extends JFrame {
         }
     }
 
-    // --- MILESTONE 2: CHAR SELECT ---
     static class CharacterSelectionPanel extends JPanel {
         private CrazyArcade game;
         private CharacterType p1Selected = CharacterType.SPEED;
@@ -161,9 +152,9 @@ public class CrazyArcade extends JFrame {
             title.setBounds(180, 20, 300, 50);
             add(title);
 
-            // Player 1 Selection Area
+          
             createSelectionArea(50, 100, "플레이어 1 (WASD)", 1);
-            // Player 2 Selection Area
+           
             createSelectionArea(320, 100, "플레이어 2 (방향키)", 2);
 
             JButton nextBtn = new JButton("맵 선택으로");
@@ -212,7 +203,6 @@ public class CrazyArcade extends JFrame {
         }
     }
 
-    // --- MILESTONE 3: MAP SELECT ---
     static class MapSelectionPanel extends JPanel {
         private CrazyArcade game;
         private CharacterType p1Type, p2Type;
@@ -259,7 +249,6 @@ public class CrazyArcade extends JFrame {
         }
     }
 
-    // --- MILESTONE 4: GAME PANEL ---
     static class GamePanel extends JPanel implements Runnable {
         private static final int TILE_SIZE = 40;
         private static final int MAP_WIDTH = 15;
@@ -470,28 +459,22 @@ public class CrazyArcade extends JFrame {
                 }
             }
 
-            // Draw Items
             for (Item item : items)
                 item.draw(g);
 
-            // Draw Bombs
             for (Bomb bomb : bombs)
                 bomb.draw(g);
 
-            // Draw Explosions
             for (Explosion exp : explosions)
                 exp.draw(g);
 
-            // Draw Players
             if (player1.alive)
                 player1.draw(g);
             if (player2.alive)
                 player2.draw(g);
 
-            // Draw UI
             drawUI(g);
 
-            // Game Over
             if (!player1.alive || !player2.alive) {
                 g.setColor(new Color(0, 0, 0, 150));
                 g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
@@ -514,9 +497,7 @@ public class CrazyArcade extends JFrame {
             g.setColor(new Color(50, 50, 50));
             g.fillRect(0, uiY, PANEL_WIDTH, 80);
 
-            // P1 Stats
             drawPlayerStats(g, player1, 10, uiY + 10);
-            // P2 Stats
             drawPlayerStats(g, player2, PANEL_WIDTH / 2 + 10, uiY + 10);
         }
 
@@ -532,7 +513,6 @@ public class CrazyArcade extends JFrame {
             g.drawString("범위: " + p.bombRange, x + 100, y + 30);
             g.drawString("속도: " + String.format("%.2f", p.speed), x + 180, y + 15);
 
-            // Skill Cooldown Bar
             if (p.skillCooldown > 0) {
                 g.setColor(Color.ORANGE);
                 g.fillRect(x, y + 40, (int) (p.skillCooldown / 180.0 * 200), 10);
@@ -612,7 +592,6 @@ public class CrazyArcade extends JFrame {
             if (!alive)
                 return;
 
-            // Skill Timer
             if (skillCooldown > 0)
                 skillCooldown--;
             if (skillActive) {
@@ -631,7 +610,6 @@ public class CrazyArcade extends JFrame {
                 }
             }
 
-            // Movement
             double moveSpeed = skillActive && characterType == CharacterType.SPEED ? speed * 1.5 : speed;
             double newPx = px;
             double newPy = py;
@@ -653,7 +631,6 @@ public class CrazyArcade extends JFrame {
             x = (int) Math.round(px);
             y = (int) Math.round(py);
 
-            // Item Collection
             for (Item item : items) {
                 if (item.x == x && item.y == y) {
                     applyItem(item.type);
@@ -854,3 +831,4 @@ public class CrazyArcade extends JFrame {
         }
     }
 }
+
