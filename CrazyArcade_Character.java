@@ -25,12 +25,11 @@ public class CrazyArcade_Character extends JFrame {
     }
 }
 
-// ============== 캐릭터 타입 ==============
 enum CharacterType {
-    SPEED(Color.CYAN, "스피드", 0.15, 2, 1), // 빠른 이동
-    POWER(Color.RED, "파워", 0.08, 3, 1), // 넓은 폭발 범위
-    BOMBER(Color.ORANGE, "보머", 0.1, 2, 2), // 많은 폭탄
-    BALANCED(Color.BLUE, "밸런스", 0.1, 2, 1); // 균형잡힌 능력
+    SPEED(Color.CYAN, "스피드", 0.15, 2, 1), 
+    POWER(Color.RED, "파워", 0.08, 3, 1), 
+    BOMBER(Color.ORANGE, "보머", 0.1, 2, 2), 
+    BALANCED(Color.BLUE, "밸런스", 0.1, 2, 1);
 
     Color color;
     String name;
@@ -52,7 +51,7 @@ class GamePanel extends JPanel implements Runnable {
     private static final int MAP_WIDTH = 15;
     private static final int MAP_HEIGHT = 13;
     private static final int PANEL_WIDTH = TILE_SIZE * MAP_WIDTH;
-    private static final int PANEL_HEIGHT = TILE_SIZE * MAP_HEIGHT + 60; // UI 공간 추가
+    private static final int PANEL_HEIGHT = TILE_SIZE * MAP_HEIGHT + 60;
 
     private Thread gameThread;
     private Player player1, player2;
@@ -90,7 +89,6 @@ class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        // TODO: 여기서 캐릭터 타입을 선택할 수 있게 변경하세요!
         player1 = new Player(1, 1, CharacterType.SPEED, KeyEvent.VK_W, KeyEvent.VK_S, KeyEvent.VK_A, KeyEvent.VK_D,
                 KeyEvent.VK_SPACE, KeyEvent.VK_Q);
         player2 = new Player(MAP_WIDTH - 2, MAP_HEIGHT - 2, CharacterType.POWER, KeyEvent.VK_UP, KeyEvent.VK_DOWN,
@@ -174,7 +172,6 @@ class GamePanel extends JPanel implements Runnable {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 맵 그리기
         for (int i = 0; i < MAP_HEIGHT; i++) {
             for (int j = 0; j < MAP_WIDTH; j++) {
                 int x = j * TILE_SIZE;
@@ -206,7 +203,6 @@ class GamePanel extends JPanel implements Runnable {
         if (player2.alive)
             player2.draw(g);
 
-        // UI 그리기 (하단에 플레이어 정보)
         drawUI(g);
 
         if (!player1.alive || !player2.alive) {
@@ -223,11 +219,9 @@ class GamePanel extends JPanel implements Runnable {
     private void drawUI(Graphics g) {
         int uiY = MAP_HEIGHT * TILE_SIZE;
 
-        // 배경
         g.setColor(new Color(50, 50, 50));
         g.fillRect(0, uiY, PANEL_WIDTH, 60);
 
-        // 플레이어 1 정보
         g.setColor(player1.characterType.color);
         g.fillRect(10, uiY + 10, 40, 40);
         g.setColor(Color.WHITE);
@@ -255,7 +249,6 @@ class GamePanel extends JPanel implements Runnable {
         String p2Range = "범위: " + player2.bombRange;
         g.drawString(p2Range, PANEL_WIDTH - 210, uiY + 40);
 
-        // 특수 능력 쿨다운 표시
         if (player1.skillCooldown > 0) {
             g.setColor(Color.YELLOW);
             g.fillRect(250, uiY + 20, (int) (player1.skillCooldown / 180.0 * 50), 20);
@@ -288,7 +281,7 @@ class GamePanel extends JPanel implements Runnable {
                 if (key == player1.bombKey)
                     player1.placeBomb(bombs);
                 if (key == player1.skillKey)
-                    player1.useSkill(); // 특수 능력
+                    player1.useSkill(); 
             }
 
             if (player2.alive) {
@@ -303,7 +296,7 @@ class GamePanel extends JPanel implements Runnable {
                 if (key == player2.bombKey)
                     player2.placeBomb(bombs);
                 if (key == player2.skillKey)
-                    player2.useSkill(); // 특수 능력
+                    player2.useSkill(); 
             }
         }
 
@@ -342,7 +335,6 @@ class Player {
     int currentBombs = 0;
     double speed;
 
-    // 특수 능력 관련
     int skillCooldown = 0;
     int skillDuration = 0;
     boolean skillActive = false;
@@ -371,7 +363,6 @@ class Player {
         if (!alive)
             return;
 
-        // 스킬 쿨다운 감소
         if (skillCooldown > 0)
             skillCooldown--;
         if (skillDuration > 0) {
@@ -383,7 +374,7 @@ class Player {
         double newPx = px;
         double newPy = py;
 
-        double currentSpeed = skillActive ? speed * 1.5 : speed; // 스킬 사용시 속도 증가
+        double currentSpeed = skillActive ? speed * 1.5 : speed; 
 
         if (movingUp)
             newPy -= currentSpeed;
@@ -430,25 +421,24 @@ class Player {
         }
     }
 
-    // TODO: 캐릭터별 다른 특수 능력을 추가하세요!
     public void useSkill() {
         if (skillCooldown > 0)
-            return; // 쿨다운 중
+            return; 
 
-        skillCooldown = 180; // 3초 쿨다운
-        skillDuration = 60; // 1초 지속
+        skillCooldown = 180; 
+        skillDuration = 60; 
         skillActive = true;
 
-        // 캐릭터 타입별 특수 능력
+ 
         switch (characterType) {
             case SPEED:
-                // 이미 속도 증가 적용됨
+            
                 break;
             case POWER:
-                bombRange += 2; // 일시적으로 범위 증가
+                bombRange += 2; 
                 break;
             case BOMBER:
-                maxBombs += 2; // 일시적으로 폭탄 개수 증가
+                maxBombs += 2;
                 break;
             case BALANCED:
                 speed *= 1.3;
@@ -458,17 +448,14 @@ class Player {
     }
 
     public void draw(Graphics g) {
-        // 캐릭터 색상
         g.setColor(characterType.color);
         g.fillOval(x * 40 + 5, y * 40 + 5, 30, 30);
 
-        // 스킬 사용 중일 때 효과
         if (skillActive) {
             g.setColor(new Color(255, 255, 0, 100));
             g.fillOval(x * 40, y * 40, 40, 40);
         }
 
-        // 캐릭터 눈 그리기 (귀여운 효과)
         g.setColor(Color.WHITE);
         g.fillOval(x * 40 + 12, y * 40 + 12, 6, 6);
         g.fillOval(x * 40 + 22, y * 40 + 12, 6, 6);
@@ -536,4 +523,5 @@ class Explosion {
         g.setColor(new Color(255, 165, 0, 200));
         g.fillRect(x * 40, y * 40, 40, 40);
     }
+
 }
