@@ -25,12 +25,12 @@ public class CrazyArcade_Item extends JFrame {
     }
 }
 
-// ============== 아이템 타입 ==============
+
 enum ItemType {
-    BOMB_UP("폭탄+", Color.YELLOW, 0), // 폭탄 개수 증가
-    RANGE_UP("범위+", Color.CYAN, 1), // 폭발 범위 증가
-    SPEED_UP("속도+", Color.GREEN, 2), // 이동 속도 증가
-    SHIELD("방어막", Color.MAGENTA, 3); // 한번 폭발 방어
+    BOMB_UP("폭탄+", Color.YELLOW, 0), 
+    RANGE_UP("범위+", Color.CYAN, 1), 
+    SPEED_UP("속도+", Color.GREEN, 2), 
+    SHIELD("방어막", Color.MAGENTA, 3); 
 
     String name;
     Color color;
@@ -43,11 +43,10 @@ enum ItemType {
     }
 }
 
-// ============== 아이템 클래스 ==============
 class Item {
     int x, y;
     ItemType type;
-    int lifeTime = 600; // 10초 후 사라짐
+    int lifeTime = 600; 
 
     public Item(int x, int y, ItemType type) {
         this.x = x;
@@ -64,22 +63,19 @@ class Item {
     }
 
     public void draw(Graphics g) {
-        // 아이템 배경
+  
         g.setColor(type.color);
         g.fillRoundRect(x * 40 + 5, y * 40 + 5, 30, 30, 10, 10);
 
-        // 아이템 테두리
         g.setColor(Color.WHITE);
         g.drawRoundRect(x * 40 + 5, y * 40 + 5, 30, 30, 10, 10);
 
-        // 아이템 아이콘
         g.setColor(Color.BLACK);
         g.setFont(new Font("맑은 고딕", Font.BOLD, 10));
         FontMetrics fm = g.getFontMetrics();
         int textWidth = fm.stringWidth(type.name);
         g.drawString(type.name, x * 40 + 20 - textWidth / 2, y * 40 + 25);
 
-        // 깜빡이는 효과 (사라지기 직전)
         if (lifeTime < 120 && lifeTime % 20 < 10) {
             g.setColor(new Color(255, 255, 255, 150));
             g.fillRoundRect(x * 40 + 5, y * 40 + 5, 30, 30, 10, 10);
@@ -98,7 +94,7 @@ class GamePanel extends JPanel implements Runnable {
     private Player player1, player2;
     private List<Bomb> bombs;
     private List<Explosion> explosions;
-    private List<Item> items; // 아이템 리스트
+    private List<Item> items;
     private int[][] map;
 
     public GamePanel() {
@@ -116,7 +112,7 @@ class GamePanel extends JPanel implements Runnable {
     private void initGame() {
         bombs = new ArrayList<>();
         explosions = new ArrayList<>();
-        items = new ArrayList<>(); // 아이템 리스트 초기화
+        items = new ArrayList<>(); 
 
         map = new int[MAP_HEIGHT][MAP_WIDTH];
         for (int i = 0; i < MAP_HEIGHT; i++) {
@@ -161,7 +157,7 @@ class GamePanel extends JPanel implements Runnable {
         player1.update(map, bombs);
         player2.update(map, bombs);
 
-        // 아이템 업데이트
+    
         for (int i = items.size() - 1; i >= 0; i--) {
             Item item = items.get(i);
             item.update();
@@ -170,7 +166,7 @@ class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        // 아이템 획득 체크
+
         checkItemCollection();
 
         for (int i = bombs.size() - 1; i >= 0; i--) {
@@ -193,14 +189,14 @@ class GamePanel extends JPanel implements Runnable {
         for (Explosion exp : explosions) {
             if (exp.hits(player1.x, player1.y)) {
                 if (player1.hasShield) {
-                    player1.hasShield = false; // 방어막 소모
+                    player1.hasShield = false; 
                 } else {
                     player1.alive = false;
                 }
             }
             if (exp.hits(player2.x, player2.y)) {
                 if (player2.hasShield) {
-                    player2.hasShield = false; // 방어막 소모
+                    player2.hasShield = false; 
                 } else {
                     player2.alive = false;
                 }
@@ -212,14 +208,13 @@ class GamePanel extends JPanel implements Runnable {
         for (int i = items.size() - 1; i >= 0; i--) {
             Item item = items.get(i);
 
-            // 플레이어 1 아이템 획득
             if (player1.x == item.x && player1.y == item.y) {
                 applyItemEffect(player1, item.type);
                 items.remove(i);
                 continue;
             }
 
-            // 플레이어 2 아이템 획득
+   
             if (player2.x == item.x && player2.y == item.y) {
                 applyItemEffect(player2, item.type);
                 items.remove(i);
@@ -227,7 +222,7 @@ class GamePanel extends JPanel implements Runnable {
         }
     }
 
-    // TODO: 아이템 효과를 더 추가하거나 변경하세요!
+
     private void applyItemEffect(Player player, ItemType type) {
         switch (type) {
             case BOMB_UP:
@@ -239,7 +234,7 @@ class GamePanel extends JPanel implements Runnable {
             case SPEED_UP:
                 player.speed += 0.02;
                 if (player.speed > 0.2)
-                    player.speed = 0.2; // 최대 속도 제한
+                    player.speed = 0.2; 
                 break;
             case SHIELD:
                 player.hasShield = true;
@@ -267,8 +262,8 @@ class GamePanel extends JPanel implements Runnable {
                 if (map[ny][nx] == 2) {
                     map[ny][nx] = 0;
 
-                    // TODO: 블록 파괴 시 아이템 드롭 확률을 조정하세요!
-                    if (Math.random() < 0.5) { // 50% 확률로 아이템 드롭
+                  
+                    if (Math.random() < 0.5) { 
                         ItemType[] types = ItemType.values();
                         ItemType randomType = types[(int) (Math.random() * types.length)];
                         items.add(new Item(nx, ny, randomType));
@@ -301,7 +296,7 @@ class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        // 아이템 먼저 그리기 (플레이어 아래에)
+    
         for (Item item : items) {
             item.draw(g);
         }
@@ -319,7 +314,7 @@ class GamePanel extends JPanel implements Runnable {
         if (player2.alive)
             player2.draw(g);
 
-        // 플레이어 상태 UI (상단)
+    
         drawPlayerStats(g);
 
         if (!player1.alive || !player2.alive) {
@@ -333,7 +328,7 @@ class GamePanel extends JPanel implements Runnable {
     }
 
     private void drawPlayerStats(Graphics g) {
-        // 플레이어 1 상태 (왼쪽 위)
+      
         g.setColor(new Color(0, 0, 0, 150));
         g.fillRect(5, 5, 200, 60);
 
@@ -352,7 +347,7 @@ class GamePanel extends JPanel implements Runnable {
             g.drawString("방어막 ●", 110, 50);
         }
 
-        // 플레이어 2 상태 (오른쪽 위)
+ 
         g.setColor(new Color(0, 0, 0, 150));
         g.fillRect(PANEL_WIDTH - 205, 5, 200, 60);
 
@@ -439,7 +434,7 @@ class Player {
     int maxBombs = 1;
     int currentBombs = 0;
     double speed = 0.1;
-    boolean hasShield = false; // 방어막 여부
+    boolean hasShield = false; 
 
     boolean movingUp, movingDown, movingLeft, movingRight;
     int upKey, downKey, leftKey, rightKey, bombKey;
@@ -513,7 +508,7 @@ class Player {
         g.setColor(color);
         g.fillOval(x * 40 + 5, y * 40 + 5, 30, 30);
 
-        // 방어막 효과
+ 
         if (hasShield) {
             g.setColor(new Color(255, 0, 255, 100));
             g.drawOval(x * 40 + 2, y * 40 + 2, 36, 36);
@@ -580,4 +575,5 @@ class Explosion {
         g.setColor(new Color(255, 165, 0, 200));
         g.fillRect(x * 40, y * 40, 40, 40);
     }
+
 }
