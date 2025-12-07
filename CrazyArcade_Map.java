@@ -87,7 +87,6 @@ class MapSelectionPanel extends JPanel {
     }
 }
 
-// ============== 게임 패널 ==============
 class GamePanel extends JPanel implements Runnable {
     private static final int TILE_SIZE = 40;
     private static final int MAP_WIDTH = 15;
@@ -122,7 +121,6 @@ class GamePanel extends JPanel implements Runnable {
         explosions = new ArrayList<>();
         map = new int[MAP_HEIGHT][MAP_WIDTH];
 
-        // 맵 타입에 따라 다른 맵 생성
         switch (mapType) {
             case 1:
                 createBasicMap();
@@ -144,7 +142,6 @@ class GamePanel extends JPanel implements Runnable {
                 KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT, KeyEvent.VK_ENTER);
     }
 
-    // TODO: 여기에 다양한 맵 패턴을 추가하세요!
     private void createBasicMap() {
         for (int i = 0; i < MAP_HEIGHT; i++) {
             for (int j = 0; j < MAP_WIDTH; j++) {
@@ -161,7 +158,6 @@ class GamePanel extends JPanel implements Runnable {
     }
 
     private void createMazeMap() {
-        // 미로 형태의 맵
         for (int i = 0; i < MAP_HEIGHT; i++) {
             for (int j = 0; j < MAP_WIDTH; j++) {
                 if (i == 0 || i == MAP_HEIGHT - 1 || j == 0 || j == MAP_WIDTH - 1) {
@@ -178,7 +174,6 @@ class GamePanel extends JPanel implements Runnable {
     }
 
     private void createOpenMap() {
-        // 열린 공간이 많은 맵
         for (int i = 0; i < MAP_HEIGHT; i++) {
             for (int j = 0; j < MAP_WIDTH; j++) {
                 if (i == 0 || i == MAP_HEIGHT - 1 || j == 0 || j == MAP_WIDTH - 1) {
@@ -195,7 +190,6 @@ class GamePanel extends JPanel implements Runnable {
     }
 
     private void createSymmetricMap() {
-        // 좌우 대칭 맵
         for (int i = 0; i < MAP_HEIGHT; i++) {
             for (int j = 0; j < MAP_WIDTH / 2 + 1; j++) {
                 if (i == 0 || i == MAP_HEIGHT - 1 || j == 0 || j == MAP_WIDTH - 1) {
@@ -544,4 +538,5 @@ class Explosion {
         g.setColor(new Color(255, 165, 0, 200));
         g.fillRect(x * 40, y * 40, 40, 40);
     }
+
 }
