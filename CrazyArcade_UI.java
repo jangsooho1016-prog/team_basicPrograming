@@ -42,7 +42,7 @@ public class CrazyArcade_UI extends JFrame {
     }
 }
 
-// ============== 메뉴 화면 ==============
+
 class MenuPanel extends JPanel {
     private static final int PANEL_WIDTH = 600;
     private static final int PANEL_HEIGHT = 520;
@@ -52,21 +52,21 @@ class MenuPanel extends JPanel {
         setBackground(new Color(30, 30, 50));
         setLayout(null);
 
-        // 타이틀
+
         JLabel titleLabel = new JLabel("CRAZY ARCADE");
         titleLabel.setFont(new Font("맑은 고딕", Font.BOLD, 50));
         titleLabel.setForeground(Color.YELLOW);
         titleLabel.setBounds(100, 50, 500, 60);
         add(titleLabel);
 
-        // 부제목
+    
         JLabel subLabel = new JLabel("폭탄을 설치하여 상대를 이기세요!");
         subLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 18));
         subLabel.setForeground(Color.WHITE);
         subLabel.setBounds(150, 120, 400, 30);
         add(subLabel);
 
-        // 시간 제한 선택 버튼
+      
         JButton btn1 = createButton("1분 게임", 150, 200);
         btn1.addActionListener(e -> game.startGame(60));
         add(btn1);
@@ -79,7 +79,7 @@ class MenuPanel extends JPanel {
         btn3.addActionListener(e -> game.startGame(0));
         add(btn3);
 
-        // 조작법 안내
+
         JLabel controlLabel = new JLabel("<html>조작법:<br>플레이어1: WASD + Space<br>플레이어2: 방향키 + Enter</html>");
         controlLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
         controlLabel.setForeground(Color.LIGHT_GRAY);
@@ -110,7 +110,6 @@ class MenuPanel extends JPanel {
     }
 }
 
-// ============== 게임 패널 ==============
 class GamePanel extends JPanel implements Runnable {
     private static final int TILE_SIZE = 40;
     private static final int MAP_WIDTH = 15;
@@ -125,19 +124,19 @@ class GamePanel extends JPanel implements Runnable {
     private int[][] map;
     private CrazyArcade_UI game;
 
-    private int timeLimit; // 0이면 무제한
+    private int timeLimit;
     private int remainingTime;
     private boolean isPaused = false;
     private boolean gameOver = false;
 
-    // 점수 시스템
+
     private int player1Score = 0;
     private int player2Score = 0;
 
     public GamePanel(CrazyArcade_UI game, int timeLimit) {
         this.game = game;
         this.timeLimit = timeLimit;
-        this.remainingTime = timeLimit * 60; // 초를 프레임으로 변환
+        this.remainingTime = timeLimit * 60; 
 
         setPreferredSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
         setBackground(Color.WHITE);
@@ -196,7 +195,6 @@ class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
-        // 시간 감소
         if (timeLimit > 0 && remainingTime > 0) {
             remainingTime--;
             if (remainingTime == 0) {
@@ -227,12 +225,12 @@ class GamePanel extends JPanel implements Runnable {
         for (Explosion exp : explosions) {
             if (exp.hits(player1.x, player1.y)) {
                 player1.alive = false;
-                player2Score += 100; // 점수 증가
+                player2Score += 100; 
                 gameOver = true;
             }
             if (exp.hits(player2.x, player2.y)) {
                 player2.alive = false;
-                player1Score += 100; // 점수 증가
+                player1Score += 100; 
                 gameOver = true;
             }
         }
@@ -257,7 +255,7 @@ class GamePanel extends JPanel implements Runnable {
 
                 if (map[ny][nx] == 2) {
                     map[ny][nx] = 0;
-                    bomb.owner.blocksDestroyed++; // 파괴한 블록 수 증가
+                    bomb.owner.blocksDestroyed++; 
                     break;
                 }
             }
@@ -268,11 +266,10 @@ class GamePanel extends JPanel implements Runnable {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 맵 그리기
         for (int i = 0; i < MAP_HEIGHT; i++) {
             for (int j = 0; j < MAP_WIDTH; j++) {
                 int x = j * TILE_SIZE;
-                int y = i * TILE_SIZE + 80; // UI 공간만큼 아래로
+                int y = i * TILE_SIZE + 80; 
 
                 if (map[i][j] == 1) {
                     g.setColor(Color.DARK_GRAY);
@@ -287,7 +284,7 @@ class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        // 게임 객체 그리기 (y좌표에 80 더하기)
+
         for (Explosion exp : explosions) {
             exp.draw(g, 80);
         }
@@ -301,10 +298,10 @@ class GamePanel extends JPanel implements Runnable {
         if (player2.alive)
             player2.draw(g, 80);
 
-        // TODO: 상단 UI를 더 예쁘게 꾸미세요!
+  
         drawTopUI(g);
 
-        // 일시정지 화면
+       
         if (isPaused) {
             g.setColor(new Color(0, 0, 0, 150));
             g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
@@ -321,7 +318,7 @@ class GamePanel extends JPanel implements Runnable {
                     PANEL_HEIGHT / 2 + 50);
         }
 
-        // 게임 오버 화면
+        
         if (gameOver) {
             g.setColor(new Color(0, 0, 0, 180));
             g.fillRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
@@ -339,7 +336,7 @@ class GamePanel extends JPanel implements Runnable {
             FontMetrics fm = g.getFontMetrics();
             g.drawString(resultText, (PANEL_WIDTH - fm.stringWidth(resultText)) / 2, PANEL_HEIGHT / 2 - 50);
 
-            // 최종 점수
+         
             g.setColor(Color.WHITE);
             g.setFont(new Font("맑은 고딕", Font.BOLD, 25));
             String scoreText = String.format("파랑 %d : %d 빨강", player1Score + player1.blocksDestroyed * 10,
@@ -354,11 +351,11 @@ class GamePanel extends JPanel implements Runnable {
     }
 
     private void drawTopUI(Graphics g) {
-        // 배경
+     
         g.setColor(new Color(40, 40, 60));
         g.fillRect(0, 0, PANEL_WIDTH, 80);
 
-        // 플레이어 1 정보
+       
         g.setColor(player1.color);
         g.fillRoundRect(10, 10, 60, 60, 15, 15);
         g.setColor(Color.WHITE);
@@ -369,7 +366,7 @@ class GamePanel extends JPanel implements Runnable {
         g.drawString("점수: " + (player1Score + player1.blocksDestroyed * 10), 80, 30);
         g.drawString("블록: " + player1.blocksDestroyed, 80, 50);
 
-        // 중앙 타이머
+     
         g.setColor(Color.YELLOW);
         g.setFont(new Font("맑은 고딕", Font.BOLD, 30));
         String timeText = timeLimit == 0 ? "∞"
@@ -377,7 +374,7 @@ class GamePanel extends JPanel implements Runnable {
         FontMetrics fm = g.getFontMetrics();
         g.drawString(timeText, (PANEL_WIDTH - fm.stringWidth(timeText)) / 2, 45);
 
-        // 플레이어 2 정보
+        
         g.setColor(player2.color);
         g.fillRoundRect(PANEL_WIDTH - 70, 10, 60, 60, 15, 15);
         g.setColor(Color.WHITE);
@@ -397,19 +394,19 @@ class GamePanel extends JPanel implements Runnable {
         public void keyPressed(KeyEvent e) {
             int key = e.getKeyCode();
 
-            // 일시정지 토글
+       
             if (key == KeyEvent.VK_P) {
                 isPaused = !isPaused;
                 return;
             }
 
-            // 메뉴로 돌아가기
+         
             if (key == KeyEvent.VK_ESCAPE) {
                 game.showMenu();
                 return;
             }
 
-            // 게임 재시작
+          
             if (key == KeyEvent.VK_R && gameOver) {
                 gameOver = false;
                 player1Score = 0;
@@ -483,7 +480,7 @@ class Player {
     int maxBombs = 1;
     int currentBombs = 0;
     double speed = 0.1;
-    int blocksDestroyed = 0; // 파괴한 블록 수
+    int blocksDestroyed = 0; 
 
     boolean movingUp, movingDown, movingLeft, movingRight;
     int upKey, downKey, leftKey, rightKey, bombKey;
@@ -617,4 +614,5 @@ class Explosion {
         g.setColor(new Color(255, 165, 0, 200));
         g.fillRect(x * 40, y * 40 + offsetY, 40, 40);
     }
+
 }
