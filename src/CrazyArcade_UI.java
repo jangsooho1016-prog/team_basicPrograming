@@ -49,8 +49,15 @@ public class CrazyArcade_UI extends JFrame {
         // 각 패널 생성 및 메인 컨테이너에 추가
         // add(패널객체, 식별자) 형태로 추가하여 나중에 식별자로 화면을 전환함
         mainContainer.add(new MenuPanel(this), PANEL_MENU);
-        mainContainer.add(new LobbyPanel(this), PANEL_LOBBY);
-        mainContainer.add(new GamePanelPlaceholder(this), PANEL_GAME);
+
+        // 로비 패널 (맵 선택 정보를 가져오기 위해 참조 유지)
+        LobbyPanel lobbyPanel = new LobbyPanel(this);
+        mainContainer.add(lobbyPanel, PANEL_LOBBY);
+
+        // 게임 패널 (로비에서 선택한 맵 정보를 전달받음)
+        GamePanelPlaceholder gamePanel = new GamePanelPlaceholder(this, lobbyPanel);
+        mainContainer.add(gamePanel, PANEL_GAME);
+
         mainContainer.add(new GuidePanel(this), PANEL_GUIDE);
         mainContainer.add(new CreditsPanel(this), PANEL_CREDITS);
         mainContainer.add(new SettingsPanel(this), PANEL_SETTINGS);
@@ -85,10 +92,14 @@ public class CrazyArcade_UI extends JFrame {
         // 지정된 패널로 화면 전환
         cardLayout.show(mainContainer, panelName);
 
-        // 게임 패널로 전환될 때 포커스를 요청하여 키보드 입력을 받을 수 있게 함
+        // 게임 패널로 전환될 때 게임 초기화 및 포커스 요청
         // 패널 순서: 0=Menu, 1=Lobby, 2=Game, 3=Guide, 4=Credits, 5=Settings
         if (panelName.equals(PANEL_GAME)) {
             Component gamePanel = mainContainer.getComponent(2);
+            if (gamePanel instanceof GamePanelPlaceholder) {
+                GamePanelPlaceholder gp = (GamePanelPlaceholder) gamePanel;
+                gp.startNewGame(); // 게임 시작/재시작
+            }
             if (gamePanel != null)
                 gamePanel.requestFocusInWindow();
         }

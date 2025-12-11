@@ -555,17 +555,29 @@ public class LobbyPanel extends JPanel {
         }
     }
 
+    /**
+     * 맵 이미지 로드
+     * res/ 폴더에서 forest24.png (Map1)과 map2.png (Map2)를 로드합니다.
+     */
     private void loadMapImages() {
         try {
-            String basePath = System.getProperty("user.dir") + File.separator + "image" + File.separator + "InGame"
-                    + File.separator;
-            File map1File = new File(basePath + "map1.PNG");
-            if (map1File.exists())
+            String basePath = System.getProperty("user.dir") + File.separator + "res" + File.separator;
+
+            // Map1: forest24.png (숲 테마)
+            File map1File = new File(basePath + "forest24.png");
+            if (map1File.exists()) {
                 map1Img = ImageIO.read(map1File);
-            File map2File = new File(basePath + "map2.bmp");
-            if (map2File.exists())
+                System.out.println("Map1 이미지 로드 성공: " + map1File.getPath());
+            }
+
+            // Map2: map2.png (기본 맵)
+            File map2File = new File(basePath + "map2.png");
+            if (map2File.exists()) {
                 map2Img = ImageIO.read(map2File);
+                System.out.println("Map2 이미지 로드 성공: " + map2File.getPath());
+            }
         } catch (IOException e) {
+            System.err.println("맵 이미지 로드 실패: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -625,5 +637,25 @@ public class LobbyPanel extends JPanel {
     // 선택된 맵 이름 반환 (게임 시작 시 사용)
     public String getSelectedMap() {
         return selectedMap;
+    }
+
+    /**
+     * 1P 캐릭터 반환 (랜덤 선택 시 실제 캐릭터로 변환)
+     */
+    public String getP1Character() {
+        if ("랜덤".equals(p1Character)) {
+            return Math.random() < 0.5 ? "배찌" : "다오";
+        }
+        return p1Character;
+    }
+
+    /**
+     * 2P 캐릭터 반환 (랜덤 선택 시 실제 캐릭터로 변환)
+     */
+    public String getP2Character() {
+        if ("랜덤".equals(p2Character)) {
+            return Math.random() < 0.5 ? "배찌" : "다오";
+        }
+        return p2Character;
     }
 }
