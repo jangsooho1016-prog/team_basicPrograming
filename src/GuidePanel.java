@@ -6,8 +6,8 @@ import java.io.File;
  * ========================================================
  * 3. 가이드 패널 (Guide Panel)
  * ========================================================
- * 게임 방법(조작법)을 안내하는 화면입니다.
- * 준비된 이미지(game play.png)를 화면에 맞게 비율을 유지하며 출력합니다.
+ * 게임 조작법을 안내하는 화면입니다.
+ * res/game play.png 이미지를 화면 비율에 맞게 표시합니다.
  */
 public class GuidePanel extends JPanel {
     private static final int PANEL_WIDTH = 800;

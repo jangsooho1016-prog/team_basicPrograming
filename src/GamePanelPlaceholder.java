@@ -2,17 +2,18 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.net.URL;
 import javax.imageio.ImageIO;
+import java.io.File;
 import java.io.IOException;
 
 /**
  * ========================================================
- * 6. 게임 패널 (Game Panel)
+ * 5. 게임 패널 (Game Panel)
  * ========================================================
  * 실제 게임 플레이 화면입니다.
- * 좌측: 게임 맵, 우측: 타이머/캐릭터 정보/아이템 정보
- * Crazy Arcade 스타일로 구현
+ * - 좌측: 게임 맵 표시
+ * - 우측: 타이머, 캐릭터 정보, 아이템 정보
+ * ESC 키로 로비로 돌아갈 수 있습니다.
  */
 public class GamePanelPlaceholder extends JPanel {
     private CrazyArcade_UI mainFrame;
@@ -61,9 +62,10 @@ public class GamePanelPlaceholder extends JPanel {
      */
     private void loadGameMapImage() {
         try {
-            URL mapUrl = getClass().getResource("/res/game play.png");
-            if (mapUrl != null) {
-                gameMapImage = ImageIO.read(mapUrl);
+            String mapPath = System.getProperty("user.dir") + File.separator + "res" + File.separator + "game play.png";
+            File mapFile = new File(mapPath);
+            if (mapFile.exists()) {
+                gameMapImage = ImageIO.read(mapFile);
             }
         } catch (IOException e) {
             System.err.println("게임 맵 이미지 로드 실패: " + e.getMessage());
@@ -75,14 +77,14 @@ public class GamePanelPlaceholder extends JPanel {
      */
     private void loadCharacterImages() {
         try {
-            URL bazziUrl = getClass().getResource("/res/배찌.png");
-            if (bazziUrl != null) {
-                bazziImg = ImageIO.read(bazziUrl);
+            String basePath = System.getProperty("user.dir") + File.separator + "res" + File.separator;
+            File bazziFile = new File(basePath + "배찌.png");
+            if (bazziFile.exists()) {
+                bazziImg = ImageIO.read(bazziFile);
             }
-
-            URL daoUrl = getClass().getResource("/res/다오.png");
-            if (daoUrl != null) {
-                daoImg = ImageIO.read(daoUrl);
+            File daoFile = new File(basePath + "다오.png");
+            if (daoFile.exists()) {
+                daoImg = ImageIO.read(daoFile);
             }
         } catch (IOException e) {
             System.err.println("캐릭터 이미지 로드 실패: " + e.getMessage());
@@ -94,9 +96,10 @@ public class GamePanelPlaceholder extends JPanel {
      */
     private void loadCustomCursor() {
         try {
-            URL cursorUrl = getClass().getResource("/res/cursor.png");
-            if (cursorUrl != null) {
-                Image cursorImg = ImageIO.read(cursorUrl);
+            String cursorPath = System.getProperty("user.dir") + File.separator + "res" + File.separator + "cursor.png";
+            File cursorFile = new File(cursorPath);
+            if (cursorFile.exists()) {
+                Image cursorImg = ImageIO.read(cursorFile);
                 Toolkit toolkit = Toolkit.getDefaultToolkit();
                 customCursor = toolkit.createCustomCursor(cursorImg, new Point(0, 0), "CustomCursor");
                 setCursor(customCursor);

@@ -12,7 +12,7 @@ import java.io.File;
  * 주요 기능:
  * 1. 화면 전환 관리 (showPanel 메서드)
  * 2. 전체적인 프로그램 실행 진입점 (main 메서드)
- * 3. 각 패널(스플래시, 메뉴, 로비, 게임 등) 초기화 및 추가
+ * 3. 각 패널(메뉴, 로비, 게임, 가이드, 크레딧, 설정) 초기화 및 추가
  */
 public class CrazyArcade_UI extends JFrame {
 
@@ -24,7 +24,6 @@ public class CrazyArcade_UI extends JFrame {
 
     // 화면 식별용 상수 (Panel Identifiers)
     // 각 패널을 구분하기 위한 고유한 키값입니다.
-    public static final String PANEL_SPLASH = "SPLASH"; // 스플래시 화면 (초기 로딩)
     public static final String PANEL_MENU = "MENU"; // 메인 메뉴
     public static final String PANEL_LOBBY = "LOBBY"; // 게임 로비 (캐릭터 선택)
     public static final String PANEL_GAME = "GAME"; // 실제 게임 플레이 화면
@@ -49,7 +48,6 @@ public class CrazyArcade_UI extends JFrame {
 
         // 각 패널 생성 및 메인 컨테이너에 추가
         // add(패널객체, 식별자) 형태로 추가하여 나중에 식별자로 화면을 전환함
-        mainContainer.add(new SplashPanel(this), PANEL_SPLASH);
         mainContainer.add(new MenuPanel(this), PANEL_MENU);
         mainContainer.add(new LobbyPanel(this), PANEL_LOBBY);
         mainContainer.add(new GamePanelPlaceholder(this), PANEL_GAME);
@@ -69,8 +67,9 @@ public class CrazyArcade_UI extends JFrame {
         // 창을 보이게 설정
         setVisible(true);
 
-        // 프로그램 시작 시 스플래시 화면을 가장 먼저 표시
-        showPanel(PANEL_SPLASH);
+        // 프로그램 시작 시 메뉴 화면 표시 및 BGM 재생
+        showPanel(PANEL_MENU);
+        startBGM();
     }
 
     /**
@@ -84,21 +83,18 @@ public class CrazyArcade_UI extends JFrame {
         cardLayout.show(mainContainer, panelName);
 
         // 게임 패널로 전환될 때 포커스를 요청하여 키보드 입력을 받을 수 있게 함
-        // (주의: 컴포넌트 인덱스 3번이 GamePanelPlaceholder라고 가정 - 순서 변경 시 수정 필요)
+        // 패널 순서: 0=Menu, 1=Lobby, 2=Game, 3=Guide, 4=Credits, 5=Settings
         if (panelName.equals(PANEL_GAME)) {
-            // 인덱스 기반 접근은 위험할 수 있으므로, 나중에 Map으로 관리하는 것이 좋을 수 있음
-            // 현재는 add 순서상 3번째가 GamePanelPlaceholder임
-            Component gamePanel = mainContainer.getComponent(3);
+            Component gamePanel = mainContainer.getComponent(2);
             if (gamePanel != null)
                 gamePanel.requestFocusInWindow();
         }
 
         // 크레딧 화면 처리: 크레딧 화면이면 스크롤 시작, 아니면 정지
-        // 인덱스 5번이 CreditsPanel이라고 가정
         try {
-            Component loopComp = mainContainer.getComponent(5);
-            if (loopComp instanceof CreditsPanel) {
-                CreditsPanel cp = (CreditsPanel) loopComp;
+            Component creditsComp = mainContainer.getComponent(4);
+            if (creditsComp instanceof CreditsPanel) {
+                CreditsPanel cp = (CreditsPanel) creditsComp;
                 if (panelName.equals(PANEL_CREDITS))
                     cp.startScrolling();
                 else
