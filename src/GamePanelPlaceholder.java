@@ -12,153 +12,152 @@ import java.io.FileReader;
 
 /**
  * ========================================================
- * 5. 게임 패널 (Game Panel)
+ * 5. 게임 패널 (Game Panel) - [핵심 게임 로직]
  * ========================================================
- * 실제 게임 플레이 화면입니다.
+ * 실제 게임 플레이가 이루어지는 핵심 클래스입니다.
+ * 맵 렌더링, 캐릭터 이동, 물풍선 설치 및 폭발, 승패 판정 등
+ * 게임의 모든 로직이 이 파일에서 처리됩니다.
  * 
- * 화면 구성:
- * - 좌측 (570x570): 맵 + 게임 플레이 영역
- * - 우측 상단: 1P 캐릭터 정보 박스
- * - 우측 상단-중앙: 1P 아이템 박스
- * - 우측 중앙: 2P 캐릭터 정보 박스
- * - 우측 중앙-하단: 2P 아이템 박스
- * - 우측 하단: 나가기 버튼
+ * --------------------------------------------------------
+ * [화면 구성]
+ * - 좌측 (570x570): 실제 게임이 진행되는 맵 영역 (13x15 타일 그리드)
+ * - 우측: 플레이어 정보(캐릭터, 아이템 상태) 및 나가기 버튼
  * 
- * 조작법:
- * - ESC 키: 로비로 돌아가기
- * - 마우스 클릭 (나가기 버튼): 로비로 돌아가기
+ * [핵심 기능]
+ * 1. 게임 루프 (Swing Timer 이용, 초당 약 60회 업데이트)
+ * 2. 충돌 감지 (캐릭터가 블록이나 맵 밖으로 나가지 못하게 함)
+ * 3. 물풍선 로직 (설치 -> 3초 후 폭발 -> 블록 파괴 및 게임 결과 판정)
+ * --------------------------------------------------------
  */
 public class GamePanelPlaceholder extends JPanel {
-    // 메인 프레임 참조 (화면 전환용)
-    private CrazyArcade_UI mainFrame;
+    // ========== [1] 기본 설정 및 참조 변수 ==========
+    private CrazyArcade_UI mainFrame; // 화면 전환을 위한 메인 프레임 참조
+    private LobbyPanel lobbyPanel; // 로비 정보를 가져오기 위한 참조
 
-    // 게임 맵 이미지 (image/InGame/map2.bmp) - 기존 호환용
-    private Image gameMapImage;
-
-    // 팀원 맵 시스템 (새로 통합)
+    // ========== [2] 맵 시스템 ==========
+    // 배경 이미지를 담당하는 Map 객체
     private Map gameMap;
 
-    // 타일 시스템 (블록/아이템 배치)
+    // 게임 맵을 격자(Grid)로 관리하기 위한 2차원 배열
+    // tiles[행][열] 형태로 접근하며, 각 타일은 블록이나 아이템 정보를 가집니다.
     private Tile[][] tiles;
-    private static final int TILE_ROWS = 13; // 타일 행 수
-    private static final int TILE_COLS = 15; // 타일 열 수
+    private static final int TILE_ROWS = 13; // 세로 타일 개수
+    private static final int TILE_COLS = 15; // 가로 타일 개수
 
-    // 캐릭터 이미지 (1P: 배찌, 2P: 다오)
-    private Image bazziImg, daoImg;
+    // ========== [3] 캐릭터 시스템 ==========
+    // 이미지 리소스
+    private Image bazziImg; // 배찌 이미지
+    private Image daoImg; // 다오 이미지
 
-    // 실제 선택된 캐릭터 (랜덤 적용 후)
+    // 현재 플레이어의 선택된 캐릭터 이름
     private String p1CharacterName = "배찌";
     private String p2CharacterName = "다오";
 
-    // ========== 플레이어 위치 및 이동 ==========
-    // Player 1 (배찌) 위치
-    private int p1X = 60; // 1P X 좌표
-    private int p1Y = 60; // 1P Y 좌표
+    // ========== [4] 좌표 및 이동 시스템 ==========
+    // Player 1 (왼쪽 상단 시작)
+    private int p1X = 60;
+    private int p1Y = 60;
 
-    // Player 2 (다오) 위치
-    private int p2X = 520; // 2P X 좌표
-    private int p2Y = 520; // 2P Y 좌표
+    // Player 2 (오른쪽 하단 시작)
+    private int p2X = 520;
+    private int p2Y = 520;
 
-    // 캐릭터 크기 및 이동 속도
-    private static final int PLAYER_SIZE = 40; // 캐릭터 크기
-    private static final int MOVE_SPEED = 5; // 이동 속도 (픽셀)
+    // 캐릭터 설정
+    private static final int PLAYER_SIZE = 40; // 캐릭터 크기 (픽셀)
+    private static final int MOVE_SPEED = 5; // 한 번에 이동하는 픽셀 수 (속도)
 
-    // 키 입력 상태 (동시 입력 처리용)
+    // 키보드 동시 입력을 처리하기 위한 상태 플래그
+    // true면 해당 방향키가 눌려있는 상태입니다.
     private boolean p1UpPressed, p1DownPressed, p1LeftPressed, p1RightPressed;
     private boolean p2UpPressed, p2DownPressed, p2LeftPressed, p2RightPressed;
 
-    // 게임 루프 타이머
+    // ========== [5] 게임 루프 & 타이머 ==========
+    // 게임의 심장 역할. 일정 시간마다 updateGame()과 repaint()를 호출합니다.
     private javax.swing.Timer gameTimer;
 
-    // ========== 물풍선 시스템 ==========
-    private java.util.List<WaterBomb> bombs = new java.util.ArrayList<>(); // 설치된 물풍선 리스트
-    private static final int BOMB_SIZE = 38; // 물풍선 크기
-    private static final int BOMB_TIMER = 3000; // 물풍선 폭발 시간 (3초)
+    // 물풍선 관리 리스트 (설치된 모든 물풍선을 저장)
+    private java.util.List<WaterBomb> bombs = new java.util.ArrayList<>();
+    private static final int BOMB_SIZE = 38;
+    private static final int BOMB_TIMER = 3000; // 폭발까지 걸리는 시간 (ms)
 
-    // 타일 크기 (충돌 계산용)
+    // 타일 하나의 실제 픽셀 크기 (충돌 계산에 사용)
     private int tileWidth;
     private int tileHeight;
 
-    // ========== 게임 타이머 시스템 ==========
-    private static final int GAME_TIME = 150; // 게임 시간 (2분 30초 = 150초)
-    private int remainingTime = GAME_TIME; // 남은 시간 (초)
-    private long lastTimerUpdate = 0; // 마지막 타이머 업데이트 시간
+    // ========== [6] 게임 상태 및 승패 판정 ==========
+    private static final int GAME_TIME = 150; // 제한 시간 (초)
+    private int remainingTime = GAME_TIME;
+    private long lastTimerUpdate = 0;
 
-    // ========== 게임 상태 ==========
-    private static final int STATE_PLAYING = 0; // 게임 진행 중
+    // 게임 상태 상수
+    private static final int STATE_PLAYING = 0; // 진행 중
     private static final int STATE_P1_WIN = 1; // 1P 승리
     private static final int STATE_P2_WIN = 2; // 2P 승리
     private static final int STATE_DRAW = 3; // 무승부
     private int gameState = STATE_PLAYING;
 
-    // 플레이어 생존 여부
+    // 플레이어 생존 플래그
     private boolean p1Alive = true;
     private boolean p2Alive = true;
 
-    // 결과 이미지
+    // 결과 이미지 리소스
     private Image winImg, loseImg, drawImg;
+    private long resultDisplayTime = 0; // 결과 화면 표시 시작 시간
+    private static final int RESULT_DISPLAY_DURATION = 3000; // 결과 표시 지속 시간
 
-    // 결과 화면 표시 후 로비 복귀 타이머
-    private long resultDisplayTime = 0;
-    private static final int RESULT_DISPLAY_DURATION = 3000; // 결과 3초 표시 후 로비로
-
-    // ========== 레이아웃 상수 ==========
-    // 맵 영역 좌표 및 크기
-    private static final int MAP_X = 15; // 맵 시작 X 좌표
-    private static final int MAP_Y = 15; // 맵 시작 Y 좌표
+    // ========== [7] 레이아웃 상수 ==========
+    private static final int MAP_X = 15; // 맵 시작 X
+    private static final int MAP_Y = 15; // 맵 시작 Y
     private static final int MAP_WIDTH = 570; // 맵 너비
     private static final int MAP_HEIGHT = 570; // 맵 높이
 
-    // 우측 패널 좌표 및 크기
-    private static final int RIGHT_PANEL_X = 600; // 우측 패널 시작 X 좌표
-    private static final int RIGHT_PANEL_WIDTH = 185; // 우측 패널 너비
-
-    // 로비 패널 참조 (맵 선택 정보)
-    private LobbyPanel lobbyPanel;
+    private static final int RIGHT_PANEL_X = 600; // 우측 정보창 X
+    private static final int RIGHT_PANEL_WIDTH = 185; // 우측 정보창 너비
 
     /**
      * 생성자: 게임 화면 초기화 (기존 호환용)
-     * 
-     * @param mainFrame 메인 프레임 (화면 전환에 사용)
      */
     public GamePanelPlaceholder(CrazyArcade_UI mainFrame) {
         this(mainFrame, null);
     }
 
     /**
-     * 생성자: 게임 화면 초기화 (맵 선택 지원)
+     * 생성자: 게임 패널 초기화 및 리소스 로드
+     * 게임에 필요한 이미지, 맵 데이터, 리스너 등을 설정합니다.
      * 
-     * @param mainFrame  메인 프레임 (화면 전환에 사용)
-     * @param lobbyPanel 로비 패널 (맵 선택 정보 가져오기용)
+     * @param mainFrame  화면 전환을 위한 메인 프레임
+     * @param lobbyPanel 맵/캐릭터 선택 정보를 가져올 로비 패널
      */
     public GamePanelPlaceholder(CrazyArcade_UI mainFrame, LobbyPanel lobbyPanel) {
         this.mainFrame = mainFrame;
         this.lobbyPanel = lobbyPanel;
-        setLayout(null); // 절대 좌표 레이아웃 사용
+
+        setLayout(null); // 컴포넌트 위치를 직접 지정하기 위해 null layout 사용
         setPreferredSize(new Dimension(800, 600));
-        setBackground(new Color(50, 50, 50)); // 진한 회색 배경
+        setBackground(new Color(50, 50, 50)); // 배경색 설정
 
-        // 이미지 리소스 로드
+        // 1. 이미지 리소스 로드 (캐릭터, 승패 이미지 등)
         loadCharacterImages();
-        loadResultImages(); // 승리/패배/무승부 이미지
+        loadResultImages();
 
-        // 팀원 맵 시스템 초기화 (기본 맵)
+        // 2. 맵 시스템 초기화 (타일 데이터 로드)
         initMapSystem();
 
-        // 플레이어 초기 위치 설정
+        // 3. 플레이어 시작 위치 설정
         initPlayerPositions();
 
-        // 키 입력 처리 (이동 + ESC)
+        // 4. 이벤트 리스너 등록
+        // 키보드 입력을 받기 위해 포커스 설정
         setFocusable(true);
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                handleKeyPressed(e);
+                handleKeyPressed(e); // 키 누를 때 처리
             }
 
             @Override
             public void keyReleased(KeyEvent e) {
-                handleKeyReleased(e);
+                handleKeyReleased(e); // 키 뗄 때 처리
             }
         });
 
@@ -170,6 +169,7 @@ public class GamePanelPlaceholder extends JPanel {
                 Rectangle exitBounds = new Rectangle(RIGHT_PANEL_X, 540, RIGHT_PANEL_WIDTH, 45);
                 if (exitBounds.contains(e.getPoint())) {
                     stopGameLoop();
+                    playLobbyBGM(); // 로비 BGM으로 전환
                     mainFrame.showPanel(CrazyArcade_UI.PANEL_LOBBY);
                 }
             }
@@ -226,7 +226,28 @@ public class GamePanelPlaceholder extends JPanel {
         // 키보드 포커스 요청
         requestFocusInWindow();
 
+        // 인게임 BGM 시작
+        playInGameBGM();
+
         System.out.println("새 게임 시작! 1P: " + p1CharacterName + ", 2P: " + p2CharacterName);
+    }
+
+    /**
+     * 인게임 BGM 재생
+     */
+    private void playInGameBGM() {
+        String bgmPath = System.getProperty("user.dir") + File.separator + "sound" + File.separator
+                + "Crazy-Arcade-BGM-Patrit.wav";
+        BGMPlayer.getInstance().loadAndPlay(bgmPath);
+    }
+
+    /**
+     * 로비 BGM 재생
+     */
+    private void playLobbyBGM() {
+        String bgmPath = System.getProperty("user.dir") + File.separator + "sound" + File.separator
+                + "Crazy-Arcade-BGM-Room.wav";
+        BGMPlayer.getInstance().loadAndPlay(bgmPath);
     }
 
     /**
@@ -282,22 +303,26 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 게임 루프 시작 (60 FPS)
+     * [핵심] 게임 루프 시작 메서드
+     * javax.swing.Timer를 사용하여 약 60 FPS(초당 60프레임)로 게임을 갱신합니다.
+     * 16ms마다 updateGame(데이터 갱신)과 repaint(화면 다시 그리기)를 반복 호출합니다.
      */
     private void startGameLoop() {
         if (gameTimer != null) {
             gameTimer.stop();
         }
 
+        // 16ms = 약 60 Frame Per Second (1000ms / 60)
         gameTimer = new javax.swing.Timer(16, e -> {
-            updateGame();
-            repaint();
+            updateGame(); // 게임 로직(변수, 위치 등) 업데이트
+            repaint(); // 화면 그래픽 다시 그리기 (paintComponent 호출)
         });
         gameTimer.start();
     }
 
     /**
      * 게임 루프 중지
+     * 게임이 끝나거나 화면을 나갈 때 타이머를 멈춥니다.
      */
     private void stopGameLoop() {
         if (gameTimer != null) {
@@ -306,17 +331,21 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 게임 상태 업데이트 (매 프레임 호출)
+     * [핵심] 게임 상태 업데이트 (매 프레임 호출됨)
+     * 캐릭터 이동, 충돌 체크, 물풍선 처리, 승패 판정 등 모든 로직이 여기서 수행됩니다.
      */
     private void updateGame() {
-        // 타일 크기 계산 (초기화 시 한 번만 필요하지만 안전하게)
+        // [초기화] 타일 크기 계산 (화면 크기에 맞춰 동적으로 설정)
         if (tileWidth == 0)
             tileWidth = MAP_WIDTH / TILE_COLS;
         if (tileHeight == 0)
             tileHeight = MAP_HEIGHT / TILE_ROWS;
 
-        // Player 1 이동 (충돌 검사 포함)
+        // 1. [Player 1 이동 처리]
+        // 입력된 키 상태에 따라 임시 위치(newP1X, newP1Y)를 먼저 계산합니다.
         int newP1X = p1X, newP1Y = p1Y;
+
+        // 상하좌우 이동 (맵 경계선 밖으로 나가지 않도록 Math.max/min으로 제한)
         if (p1UpPressed)
             newP1Y = Math.max(MAP_Y, p1Y - MOVE_SPEED);
         if (p1DownPressed)
@@ -326,13 +355,14 @@ public class GamePanelPlaceholder extends JPanel {
         if (p1RightPressed)
             newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + MOVE_SPEED);
 
-        // 충돌 검사 후 이동 적용
+        // 충돌 검사: 이동하려는 위치에 블록이 없으면 실제 위치(p1X, p1Y)를 업데이트합니다.
+        // X축과 Y축을 따로 검사하여, 벽에 비스듬히 부딪혀도 미끄러지듯 이동할 수 있게 합니다.
         if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE))
             p1X = newP1X;
         if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE))
             p1Y = newP1Y;
 
-        // Player 2 이동 (충돌 검사 포함)
+        // 2. [Player 2 이동 처리] (1P와 동일한 로직)
         int newP2X = p2X, newP2Y = p2Y;
         if (p2UpPressed)
             newP2Y = Math.max(MAP_Y, p2Y - MOVE_SPEED);
@@ -343,19 +373,19 @@ public class GamePanelPlaceholder extends JPanel {
         if (p2RightPressed)
             newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + MOVE_SPEED);
 
-        // 충돌 검사 후 이동 적용
         if (!isCollidingWithBlock(newP2X, p2Y, PLAYER_SIZE))
             p2X = newP2X;
         if (!isCollidingWithBlock(p2X, newP2Y, PLAYER_SIZE))
             p2Y = newP2Y;
 
-        // 물풍선 폭발 처리
+        // 3. [물풍선 처리]
+        // 설치된 물풍선의 시간을 체크하고 폭발시킵니다.
         updateBombs();
 
-        // ========== 게임 타이머 및 결과 처리 ==========
-        // 게임 진행 중일 때만 타이머 업데이트
+        // 4. [게임 타이머 및 결과 판정]
+        // 게임 진행 중일 때만 로직을 수행합니다.
         if (gameState == STATE_PLAYING) {
-            // 1초마다 타이머 감소
+            // [타이머 감소] 1초(1000ms)마다 남은 시간을 줄입니다.
             long currentTime = System.currentTimeMillis();
             if (lastTimerUpdate == 0) {
                 lastTimerUpdate = currentTime;
@@ -365,35 +395,39 @@ public class GamePanelPlaceholder extends JPanel {
                 lastTimerUpdate = currentTime;
             }
 
-            // 시간 종료 시 무승부
+            // [시간 종료] 시간이 0이 되면 무승부 처리
             if (remainingTime <= 0) {
                 gameState = STATE_DRAW;
                 resultDisplayTime = System.currentTimeMillis();
             }
 
-            // 승리 조건 확인 (둘 중 하나가 죽으면)
+            // [승패 판정] 플레이어 생존 여부를 확인하여 결과 상태를 변경합니다.
+            // (p1Alive, p2Alive 변수는 물풍선 폭발 로직에서 변경됩니다)
             if (!p1Alive && p2Alive) {
-                gameState = STATE_P2_WIN;
+                gameState = STATE_P2_WIN; // 1P 사망 -> 2P 승리
                 resultDisplayTime = System.currentTimeMillis();
             } else if (p1Alive && !p2Alive) {
-                gameState = STATE_P1_WIN;
+                gameState = STATE_P1_WIN; // 2P 사망 -> 1P 승리
                 resultDisplayTime = System.currentTimeMillis();
             } else if (!p1Alive && !p2Alive) {
-                gameState = STATE_DRAW;
+                gameState = STATE_DRAW; // 둘 다 사망 -> 무승부
                 resultDisplayTime = System.currentTimeMillis();
             }
         } else {
-            // 결과 화면 표시 후 로비로 복귀
+            // [게임 종료 상태]
+            // 결과 화면을 3초간 보여준 뒤 로비로 자동으로 돌아갑니다.
             if (System.currentTimeMillis() - resultDisplayTime >= RESULT_DISPLAY_DURATION) {
                 stopGameLoop();
                 resetGame();
+                playLobbyBGM(); // 로비 BGM으로 복귀
                 mainFrame.showPanel(CrazyArcade_UI.PANEL_LOBBY);
             }
         }
     }
 
     /**
-     * 게임 리셋 (새 게임 시작 시)
+     * 게임 상태 초기화 메서드
+     * 새 게임을 시작할 때 모든 변수를 초기 상태로 되돌립니다.
      */
     private void resetGame() {
         gameState = STATE_PLAYING;
@@ -401,40 +435,45 @@ public class GamePanelPlaceholder extends JPanel {
         lastTimerUpdate = 0;
         p1Alive = true;
         p2Alive = true;
-        bombs.clear();
-        initPlayerPositions();
+        bombs.clear(); // 설치된 물풍선 제거
+        initPlayerPositions(); // 위치 원위치
     }
 
     /**
-     * 블록과의 충돌 검사
+     * [충돌 감지 핵심 로직]
+     * 캐릭터가 이동하려는 위치에 블록(나무, 벽 등)이 있는지 검사합니다.
      * 
-     * @param x    검사할 X 좌표
-     * @param y    검사할 Y 좌표
+     * @param x    이동하려는 X 좌표
+     * @param y    이동하려는 Y 좌표
      * @param size 캐릭터 크기
-     * @return 블록과 충돌하면 true
+     * @return true면 이동 불가능(충돌), false면 이동 가능
      */
     private boolean isCollidingWithBlock(int x, int y, int size) {
         if (tiles == null)
             return false;
 
-        // 캐릭터의 4개 모서리를 검사
+        // [4방향 모서리 검사 Point]
+        // 캐릭터의 네 모서리가 블록 영역에 겹치는지 확인합니다.
+        // 약간의 여백(+5픽셀)을 두어 판정을 부드럽게 합니다.
         int[][] corners = {
-                { x + 5, y + 5 }, // 좌상
-                { x + size - 5, y + 5 }, // 우상
-                { x + 5, y + size - 5 }, // 좌하
-                { x + size - 5, y + size - 5 } // 우하
+                { x + 5, y + 5 }, // 좌상단
+                { x + size - 5, y + 5 }, // 우상단
+                { x + 5, y + size - 5 }, // 좌하단
+                { x + size - 5, y + size - 5 } // 우하단
         };
 
         for (int[] corner : corners) {
+            // 픽셀 좌표를 타일 그리드 인덱스로 변환
             int col = (corner[0] - MAP_X) / tileWidth;
             int row = (corner[1] - MAP_Y) / tileHeight;
 
-            // 범위 체크
+            // 맵 범위 내에 있는지 확인
             if (row >= 0 && row < TILE_ROWS && col >= 0 && col < TILE_COLS) {
                 Tile tile = tiles[row][col];
                 if (tile != null) {
                     int itemIndex = tile.getItemIndex();
-                    // 블록(3, 4)은 통과 불가
+                    // itemIndex 3(벽돌) 또는 4(나무 등 파괴 가능 블록)는 통과할 수 없습니다.
+                    // (0, 1, 2는 아이템이나 빈 공간이므로 통과 가능)
                     if (itemIndex == 3 || itemIndex == 4) {
                         return true;
                     }
@@ -445,30 +484,36 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 물풍선 업데이트 (폭발 처리)
+     * 물풍선 상태 업데이트
+     * 설치된 모든 물풍선을 검사하여 폭발 시간이 지났는지 확인합니다.
      */
     private void updateBombs() {
         java.util.Iterator<WaterBomb> it = bombs.iterator();
         while (it.hasNext()) {
             WaterBomb bomb = it.next();
             if (bomb.shouldExplode()) {
-                // 폭발 처리 (블록 파괴 등)
+                // 폭발 처리 (블록 파괴 및 플레이어 피격 검사)
                 explodeBomb(bomb);
+                // 리스트에서 제거 (Iterator 안전 삭제)
                 it.remove();
             }
         }
     }
 
     /**
-     * 물풍선 폭발 처리
+     * [핵심] 물풍선 폭발 로직
+     * 물풍선이 터질 때 상하좌우 타일을 파괴하고, 플레이어가 범위 내에 있으면 게임을 끝냅니다.
+     * 
+     * @param bomb 폭발하는 물풍선 객체
      */
     private void explodeBomb(WaterBomb bomb) {
         bomb.exploded = true;
 
-        // 폭발 위치 주변 타일 파괴 (상하좌우 1칸)
+        // 폭발 범위: 중심 + 상하좌우 1칸
         int[] dRows = { 0, -1, 1, 0, 0 }; // 중심, 위, 아래
         int[] dCols = { 0, 0, 0, -1, 1 }; // 중심, 왼쪽, 오른쪽
 
+        // 물풍선이 위차한 타일 좌표
         int bombRow = (bomb.y - MAP_Y) / tileHeight;
         int bombCol = (bomb.x - MAP_X) / tileWidth;
 
@@ -476,11 +521,38 @@ public class GamePanelPlaceholder extends JPanel {
             int r = bombRow + dRows[i];
             int c = bombCol + dCols[i];
 
+            // 1. [블록 파괴] 맵 범위 내의 타일 확인
             if (r >= 0 && r < TILE_ROWS && c >= 0 && c < TILE_COLS) {
                 Tile tile = tiles[r][c];
                 if (tile != null) {
-                    tile.breakBlock(); // 블록 파괴 (아이템 드롭)
+                    // 벽(3)이 아닌 경우 블록 파괴 시도 (Tile 내부에서 파괴 가능한지 체크함)
+                    tile.breakBlock();
                 }
+            }
+
+            // 2. [플레이어 피격] 폭발 범위에 플레이어가 있는지 계산
+            // 타일의 실제 픽셀 좌표 영역
+            int tileMinX = MAP_X + c * tileWidth;
+            int tileMaxX = tileMinX + tileWidth;
+            int tileMinY = MAP_Y + r * tileHeight;
+            int tileMaxY = tileMinY + tileHeight;
+
+            // Player 1 피격 검사 (캐릭터 중심점 기준)
+            int p1CenterX = p1X + PLAYER_SIZE / 2;
+            int p1CenterY = p1Y + PLAYER_SIZE / 2;
+            if (p1Alive && p1CenterX >= tileMinX && p1CenterX <= tileMaxX &&
+                    p1CenterY >= tileMinY && p1CenterY <= tileMaxY) {
+                p1Alive = false; // 사망 처리
+                System.out.println("1P 사망!");
+            }
+
+            // Player 2 피격 검사
+            int p2CenterX = p2X + PLAYER_SIZE / 2;
+            int p2CenterY = p2Y + PLAYER_SIZE / 2;
+            if (p2Alive && p2CenterX >= tileMinX && p2CenterX <= tileMaxX &&
+                    p2CenterY >= tileMinY && p2CenterY <= tileMaxY) {
+                p2Alive = false; // 사망 처리
+                System.out.println("2P 사망!");
             }
         }
 
@@ -488,55 +560,57 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 물풍선 설치
+     * 물풍선 설치 요청 처리
+     * 현재 플레이어 위치의 타일 중심에 물풍선을 설치합니다.
      * 
-     * @param playerX 플레이어 X 좌표
-     * @param playerY 플레이어 Y 좌표
-     * @param owner   소유자 (1 또는 2)
+     * @param playerX 플레이어 현재 X
+     * @param playerY 플레이어 현재 Y
+     * @param owner   설치한 플레이어 (1=1P, 2=2P)
      */
     private void placeBomb(int playerX, int playerY, int owner) {
-        // 플레이어 중심 좌표 계산
+        // 플레이어의 중심 좌표
         int centerX = playerX + PLAYER_SIZE / 2;
         int centerY = playerY + PLAYER_SIZE / 2;
 
-        // 타일 그리드 위치 계산
+        // 해당 좌표가 속한 타일(행, 열) 계산
         int col = (centerX - MAP_X) / tileWidth;
         int row = (centerY - MAP_Y) / tileHeight;
 
-        // 범위 체크
+        // 맵 범위 체크
         if (row < 0 || row >= TILE_ROWS || col < 0 || col >= TILE_COLS)
             return;
 
-        // 해당 위치에 이미 물풍선이 있는지 확인
+        // 이미 같은 자리에 물풍선이 있는지 확인 (중복 설치 방지)
         for (WaterBomb bomb : bombs) {
             if (bomb.row == row && bomb.col == col) {
-                return; // 이미 물풍선이 있으면 설치 불가
+                return;
             }
         }
 
-        // 타일 중심 좌표 계산
+        // 물풍선을 타일의 정중앙에 위치시킴
         int bombX = MAP_X + col * tileWidth + tileWidth / 2;
         int bombY = MAP_Y + row * tileHeight + tileHeight / 2;
 
-        // 물풍선 생성 및 추가
+        // 리스트에 추가
         bombs.add(new WaterBomb(bombX, bombY, row, col, owner));
         System.out.println("물풍선 설치! " + owner + "P, 위치: (" + col + ", " + row + ")");
     }
 
     /**
-     * 키 눌림 처리
+     * 키보드 눌림 처리
+     * GameSettings에서 정의된 키 매핑을 사용하여 이동 및 물풍선 설치를 처리합니다.
      */
     private void handleKeyPressed(KeyEvent e) {
         int key = e.getKeyCode();
 
-        // ESC: 로비로 복귀
+        // ESC 키: 게임 중단 후 로비로 복귀
         if (key == KeyEvent.VK_ESCAPE) {
             stopGameLoop();
             mainFrame.showPanel(CrazyArcade_UI.PANEL_LOBBY);
             return;
         }
 
-        // Player 1 이동 키 (GameSettings에서 설정된 키 사용)
+        // 1P 조작키 확인
         if (key == GameSettings.p1_Up)
             p1UpPressed = true;
         if (key == GameSettings.p1_Down)
@@ -546,7 +620,14 @@ public class GamePanelPlaceholder extends JPanel {
         if (key == GameSettings.p1_Right)
             p1RightPressed = true;
 
-        // Player 2 이동 키
+        // 1P 물풍선 설치
+        if (key == GameSettings.p1_Bomb) {
+            // 사망 상태가 아닐 때만 설치 가능
+            if (p1Alive)
+                placeBomb(p1X, p1Y, 1);
+        }
+
+        // 2P 조작키 확인
         if (key == GameSettings.p2_Up)
             p2UpPressed = true;
         if (key == GameSettings.p2_Down)
@@ -556,22 +637,21 @@ public class GamePanelPlaceholder extends JPanel {
         if (key == GameSettings.p2_Right)
             p2RightPressed = true;
 
-        // 물풍선 설치 키
-        if (key == GameSettings.p1_Bomb) {
-            placeBomb(p1X, p1Y, 1); // 1P 물풍선 설치
-        }
+        // 2P 물풍선 설치
         if (key == GameSettings.p2_Bomb) {
-            placeBomb(p2X, p2Y, 2); // 2P 물풍선 설치
+            if (p2Alive)
+                placeBomb(p2X, p2Y, 2);
         }
     }
 
     /**
-     * 키 뗌 처리
+     * 키보드 뗌 처리
+     * 이동 멈춤 상태를 업데이트합니다.
      */
     private void handleKeyReleased(KeyEvent e) {
         int key = e.getKeyCode();
 
-        // Player 1 이동 키
+        // 1P 이동 멈춤
         if (key == GameSettings.p1_Up)
             p1UpPressed = false;
         if (key == GameSettings.p1_Down)
@@ -581,7 +661,7 @@ public class GamePanelPlaceholder extends JPanel {
         if (key == GameSettings.p1_Right)
             p1RightPressed = false;
 
-        // Player 2 이동 키
+        // 2P 이동 멈춤
         if (key == GameSettings.p2_Up)
             p2UpPressed = false;
         if (key == GameSettings.p2_Down)
@@ -669,25 +749,6 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 게임 맵 이미지 로드
-     * 경로: image/InGame/map2.bmp
-     */
-    private void loadGameMapImage() {
-        try {
-            String mapPath = System.getProperty("user.dir")
-                    + File.separator + "image"
-                    + File.separator + "InGame"
-                    + File.separator + "map2.bmp";
-            File mapFile = new File(mapPath);
-            if (mapFile.exists()) {
-                gameMapImage = ImageIO.read(mapFile);
-            }
-        } catch (IOException e) {
-            System.err.println("게임 맵 이미지 로드 실패: " + e.getMessage());
-        }
-    }
-
-    /**
      * 캐릭터 이미지 로드
      * 경로: res/배찌.png, res/다오.png
      */
@@ -714,6 +775,7 @@ public class GamePanelPlaceholder extends JPanel {
     /**
      * 결과 이미지 로드
      * 경로: res/win.bmp, res/lose.bmp, res/draw.bmp
+     * 마젠타 배경(0xFF00FF)을 투명 처리합니다.
      */
     private void loadResultImages() {
         try {
@@ -721,17 +783,17 @@ public class GamePanelPlaceholder extends JPanel {
 
             File winFile = new File(basePath + "win.bmp");
             if (winFile.exists()) {
-                winImg = ImageIO.read(winFile);
+                winImg = makeTransparent(ImageIO.read(winFile));
             }
 
             File loseFile = new File(basePath + "lose.bmp");
             if (loseFile.exists()) {
-                loseImg = ImageIO.read(loseFile);
+                loseImg = makeTransparent(ImageIO.read(loseFile));
             }
 
             File drawFile = new File(basePath + "draw.bmp");
             if (drawFile.exists()) {
-                drawImg = ImageIO.read(drawFile);
+                drawImg = makeTransparent(ImageIO.read(drawFile));
             }
         } catch (IOException e) {
             System.err.println("결과 이미지 로드 실패: " + e.getMessage());
@@ -739,31 +801,61 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 화면 그리기 (paintComponent 오버라이드)
-     * 모든 UI 요소를 그립니다.
+     * 이미지의 마젠타(0xFF00FF) 색상을 투명하게 변환
+     */
+    private Image makeTransparent(java.awt.image.BufferedImage img) {
+        int width = img.getWidth();
+        int height = img.getHeight();
+        java.awt.image.BufferedImage result = new java.awt.image.BufferedImage(width, height,
+                java.awt.image.BufferedImage.TYPE_INT_ARGB);
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int rgb = img.getRGB(x, y) & 0xFFFFFF; // RGB만 추출
+                if (rgb == 0xFF00FF) { // 마젠타 색상
+                    result.setRGB(x, y, 0x00000000); // 완전 투명
+                } else {
+                    result.setRGB(x, y, img.getRGB(x, y) | 0xFF000000); // 불투명
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * [렌더링 핵심] 화면 그리기 메서드
+     * Swing의 더블 버퍼링을 통해 깜빡임 없이 매끄럽게 화면을 그립니다.
+     * 모든 UI 요소(맵, 캐릭터, 물풍선, 상태바 등)는 여기서 순서대로 그려집니다.
+     * 
+     * [그리기 순서]
+     * 1. 전체 배경
+     * 2. 게임 맵 (타일, 물풍선, 캐릭터 포함)
+     * 3. 우측 정보창 (플레이어 상태, 아이템 등)
+     * 4. 결과 오버레이 (게임 종료 시)
      */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
+        // 고품질 렌더링 설정 (안티앨리어싱 활성화)
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 전체 배경색 (진한 회색)
+        // 1. 전체 배경색 (진한 회색)
         g2.setColor(new Color(50, 50, 50));
         g2.fillRect(0, 0, getWidth(), getHeight());
 
-        // ========== 좌측: 맵 + 게임 화면 ==========
+        // 2. [좌측] 맵 + 게임 화면 그리기
         drawGameMap(g2);
 
-        // ========== 우측: 1P/2P 정보 + 나가기 ==========
-        // 1P 캐릭터 박스 (y: 15, 빨간색 테두리) - 선택된 캐릭터 표시
+        // 3. [우측] 1P/2P 정보 + 나가기 버튼 그리기
+        // 1P 캐릭터 박스 (y: 15, 빨간색 테두리)
         Image p1Img = "다오".equals(p1CharacterName) ? daoImg : bazziImg;
         drawPlayerBox(g2, RIGHT_PANEL_X, 15, RIGHT_PANEL_WIDTH, 120, "1P", p1Img, new Color(220, 80, 80));
 
         // 1P 아이템 박스 (y: 145)
         drawItemBox(g2, RIGHT_PANEL_X, 145, RIGHT_PANEL_WIDTH, 100);
 
-        // 2P 캐릭터 박스 (y: 260, 파란색 테두리) - 선택된 캐릭터 표시
+        // 2P 캐릭터 박스 (y: 260, 파란색 테두리)
         Image p2Img = "배찌".equals(p2CharacterName) ? bazziImg : daoImg;
         drawPlayerBox(g2, RIGHT_PANEL_X, 260, RIGHT_PANEL_WIDTH, 120, "2P", p2Img, new Color(80, 80, 220));
 
@@ -776,7 +868,7 @@ public class GamePanelPlaceholder extends JPanel {
         // 나가기 버튼 (y: 540)
         drawExitButton(g2, RIGHT_PANEL_X, 540, RIGHT_PANEL_WIDTH, 45);
 
-        // 게임 종료 시 결과 오버레이 표시
+        // 4. [게임 종료 결과 화면] 반투명 오버레이
         if (gameState != STATE_PLAYING) {
             drawResultOverlay(g2);
         }
@@ -853,14 +945,6 @@ public class GamePanelPlaceholder extends JPanel {
             int textY = getHeight() / 2;
             g2.drawString(text, textX, textY);
         }
-
-        // 안내 텍스트
-        g2.setColor(Color.LIGHT_GRAY);
-        g2.setFont(new Font("맑은 고딕", Font.PLAIN, 16));
-        String guideText = "잠시 후 로비로 이동합니다...";
-        FontMetrics fm = g2.getFontMetrics();
-        int textX = (getWidth() - fm.stringWidth(guideText)) / 2;
-        g2.drawString(guideText, textX, getHeight() / 2 + 100);
     }
 
     /**
@@ -874,15 +958,11 @@ public class GamePanelPlaceholder extends JPanel {
         g2.setStroke(new BasicStroke(4));
         g2.drawRect(MAP_X - 2, MAP_Y - 2, MAP_WIDTH + 4, MAP_HEIGHT + 4);
 
-        // 우선순위: 팀원 Map 시스템 > 기존 맵 이미지 > 기본 타일 맵
+        // 맵 배경 그리기 (Map 클래스 사용, 없으면 기본 맵)
         if (gameMap != null && gameMap.isLoaded()) {
-            // 팀원 Map 클래스로 맵 배경 그리기
             gameMap.drawMap(g2, MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT);
-        } else if (gameMapImage != null) {
-            // 기존 맵 이미지 그리기
-            g2.drawImage(gameMapImage, MAP_X, MAP_Y, MAP_WIDTH, MAP_HEIGHT, this);
         } else {
-            // 이미지 없을 때 기본 타일 맵 표시
+            // 맵 이미지 없을 때 기본 타일 맵 표시
             drawDefaultMap(g2);
         }
 

@@ -28,7 +28,6 @@ public class CrazyArcade_UI extends JFrame {
     public static final String PANEL_LOBBY = "LOBBY"; // 게임 로비 (캐릭터 선택)
     public static final String PANEL_GAME = "GAME"; // 실제 게임 플레이 화면
     public static final String PANEL_GUIDE = "GUIDE"; // 게임 설명 화면
-    public static final String PANEL_CREDITS = "CREDITS"; // 제작진 크레딧 화면
     public static final String PANEL_SETTINGS = "SETTINGS"; // 환경 설정 화면
 
     /**
@@ -59,7 +58,6 @@ public class CrazyArcade_UI extends JFrame {
         mainContainer.add(gamePanel, PANEL_GAME);
 
         mainContainer.add(new GuidePanel(this), PANEL_GUIDE);
-        mainContainer.add(new CreditsPanel(this), PANEL_CREDITS);
         mainContainer.add(new SettingsPanel(this), PANEL_SETTINGS);
 
         // 메인 컨테이너를 프레임에 부착
@@ -85,37 +83,28 @@ public class CrazyArcade_UI extends JFrame {
     /**
      * 화면 전환 메서드
      * CardLayout을 사용하여 지정된 이름의 패널을 최상단으로 보여줍니다.
+     * 이 메서드는 버튼 클릭 이벤트 등에서 호출되어 화면을 바꿀 때 사용됩니다.
      * 
-     * @param panelName 전환할 패널의 상수 이름 (예: PANEL_MENU)
+     * @param panelName 전환할 패널의 상수 이름 (예: PANEL_MENU, PANEL_GAME)
      */
     public void showPanel(String panelName) {
-        // 지정된 패널로 화면 전환
+        // 지정된 패널로 화면 전환 (CardLayout 기능)
         cardLayout.show(mainContainer, panelName);
 
-        // 게임 패널로 전환될 때 게임 초기화 및 포커스 요청
-        // 패널 순서: 0=Menu, 1=Lobby, 2=Game, 3=Guide, 4=Credits, 5=Settings
+        // [게임 패널로 전환될 때의 특별 처리]
+        // 게임 화면이 보여질 때마다 게임을 새로 시작하거나 재개하기 위한 로직입니다.
+        // 현재 패널 추가 순서:
+        // 0=Menu, 1=Lobby, 2=Game, 3=Guide, 4=Settings
         if (panelName.equals(PANEL_GAME)) {
+            // 컨테이너에서 3번째(인덱스 2) 컴포넌트인 게임 패널을 가져옵니다.
             Component gamePanel = mainContainer.getComponent(2);
             if (gamePanel instanceof GamePanelPlaceholder) {
                 GamePanelPlaceholder gp = (GamePanelPlaceholder) gamePanel;
-                gp.startNewGame(); // 게임 시작/재시작
+                gp.startNewGame(); // 게임 시작/재시작 메서드 호출
             }
+            // 게임 패널에 키보드 입력을 받을 수 있도록 포커스를 요청합니다.
             if (gamePanel != null)
                 gamePanel.requestFocusInWindow();
-        }
-
-        // 크레딧 화면 처리: 크레딧 화면이면 스크롤 시작, 아니면 정지
-        try {
-            Component creditsComp = mainContainer.getComponent(4);
-            if (creditsComp instanceof CreditsPanel) {
-                CreditsPanel cp = (CreditsPanel) creditsComp;
-                if (panelName.equals(PANEL_CREDITS))
-                    cp.startScrolling();
-                else
-                    cp.stopScrolling();
-            }
-        } catch (Exception e) {
-            System.err.println("크레딧 패널 제어 중 오류: " + e.getMessage());
         }
     }
 
@@ -125,8 +114,9 @@ public class CrazyArcade_UI extends JFrame {
      * BGMPlayer 싱글톤 인스턴스를 사용합니다.
      */
     public void startBGM() {
-        // 현재 실행 경로를 기준으로 sound 폴더의 노래.wav 파일을 찾음
-        String bgmPath = System.getProperty("user.dir") + File.separator + "sound" + File.separator + "노래.wav";
+        // sound 폴더의 배경음악 파일
+        String bgmPath = System.getProperty("user.dir") + File.separator + "sound" + File.separator
+                + "Crazy-Arcade-BGM-Room.wav";
 
         // BGM 로드 및 재생
         BGMPlayer.getInstance().loadAndPlay(bgmPath);

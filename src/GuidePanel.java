@@ -22,7 +22,7 @@ public class GuidePanel extends JPanel {
 
         // 스크롤 가능한 내용 패널 (세로로 길게)
         JPanel contentPanel = new JPanel(null);
-        contentPanel.setPreferredSize(new Dimension(760, 1550)); // 더 긴 높이
+        contentPanel.setPreferredSize(new Dimension(760, 1400)); // 높이 조정
         contentPanel.setBackground(new Color(50, 50, 50));
 
         // 타이틀
@@ -56,12 +56,8 @@ public class GuidePanel extends JPanel {
         contentPanel.add(createControlSection("아이템 사용", "1P: Ctrl    2P: NumPad 0", null,
                 20, itemY, sectionWidth, 100));
 
-        // 아이템 목록
-        JPanel itemListPanel = createItemListPanel(20, itemY + 120, sectionWidth, 150);
-        contentPanel.add(itemListPanel);
-
-        // 뒤로가기 버튼
-        JButton backBtn = createStyledButton("뒤로가기", 330, itemY + 290, 120, 45);
+        // 뒤로가기 버튼 (위치 조정)
+        JButton backBtn = createStyledButton("뒤로가기", 330, itemY + 120, 120, 45);
         backBtn.addActionListener(e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_MENU));
         contentPanel.add(backBtn);
 
@@ -117,10 +113,41 @@ public class GuidePanel extends JPanel {
 
             if (file.exists()) {
                 ImageIcon gifIcon = new ImageIcon(gifPath);
+                int gifW = gifIcon.getIconWidth();
+                int gifH = gifIcon.getIconHeight();
+
+                // [중앙 정렬 계산]
+                // 섹션 너비(w)에서 GIF 너비(gifW)를 뺀 나머지를 2로 나누어 X좌표를 구합니다.
+                int xPos = (w - gifW) / 2;
+                if (xPos < 0)
+                    xPos = 0;
+
+                // [핵심: 하단 노이즈 제거를 위한 클리핑 기법]
+                // 원본 GIF 이미지의 하단에 불필요한 잔상(노이즈)이 포함되어 있습니다.
+                // 이를 사용자에게 보여주지 않기 위해, JPanel을 액자처럼 사용하여 하단 45px을 잘라냅니다.
+
+                // 표시할 최대 높이 설정 (섹션 높이 - 여백)
+                int sectionLimitHeight = h - 90;
+
+                // 실제 표시할 높이 = 원본 높이에서 45px을 뺀 값 (단, 섹션 높이를 넘지 않게 함)
+                int clipHeight = Math.min(sectionLimitHeight, gifH - 45);
+
+                // 클리핑용 부모 패널 (액자 역할)
+                // 이 패널의 높이를 clipHeight로 제한하여, 자식 컴포넌트(이미지)의 아랫부분이 잘리게 합니다.
+                JPanel clipPanel = new JPanel(null);
+                clipPanel.setBounds(xPos, 80, gifW, clipHeight);
+                clipPanel.setOpaque(false); // 배경 투명
+
+                // 실제 GIF 이미지 라벨
                 JLabel gifLabel = new JLabel(gifIcon);
-                gifLabel.setBounds(20, 80, w - 40, h - 100);
-                panel.add(gifLabel);
+                // 이미지는 원본 크기 그대로 배치합니다.
+                // 부모인 clipPanel의 높이가 이미지보다 작으므로, 아래쪽 45px은 화면에 그려지지 않습니다.
+                gifLabel.setBounds(0, 0, gifW, gifH);
+
+                clipPanel.add(gifLabel);
+                panel.add(clipPanel);
             } else {
+                // 이미지가 없을 경우 대체 텍스트 표시
                 JLabel placeholder = new JLabel(gifFile, SwingConstants.CENTER);
                 placeholder.setFont(new Font("맑은 고딕", Font.BOLD, 18));
                 placeholder.setForeground(Color.WHITE);
@@ -129,77 +156,6 @@ public class GuidePanel extends JPanel {
                 placeholder.setBounds(20, 80, w - 40, h - 100);
                 panel.add(placeholder);
             }
-        }
-
-        return panel;
-    }
-
-    /**
-     * 아이템 목록 패널
-     */
-    private JPanel createItemListPanel(int x, int y, int w, int h) {
-        JPanel panel = new JPanel(null) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                g2.setColor(new Color(60, 60, 70));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                g2.setColor(new Color(100, 180, 255));
-                g2.setStroke(new BasicStroke(3));
-                g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 20, 20);
-            }
-        };
-        panel.setBounds(x, y, w, h);
-        panel.setOpaque(false);
-
-        JLabel titleLabel = new JLabel("아이템 목록", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("맑은 고딕", Font.BOLD, 20));
-        titleLabel.setForeground(new Color(255, 220, 100));
-        titleLabel.setBounds(0, 10, w, 28);
-        panel.add(titleLabel);
-
-        String[][] items = {
-                { "물풍선", "개수+1" },
-                { "물줄기", "길이+1" },
-                { "스케이트", "속도+1" },
-                { "쉴드", "방어1회" },
-                { "바늘", "통과" },
-                { "악마", "감소" }
-        };
-
-        int slotSize = 70;
-        int gap = 40;
-        int totalWidth = items.length * slotSize + (items.length - 1) * gap;
-        int startX = (w - totalWidth) / 2;
-        int startY = 45;
-
-        for (int i = 0; i < items.length; i++) {
-            int slotX = startX + i * (slotSize + gap);
-
-            JPanel itemSlot = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    Graphics2D g2 = (Graphics2D) g;
-                    g2.setColor(new Color(100, 100, 110));
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                    g2.setColor(new Color(80, 80, 90));
-                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 12, 12);
-                }
-            };
-            itemSlot.setBounds(slotX, startY, slotSize, slotSize);
-            itemSlot.setOpaque(false);
-            panel.add(itemSlot);
-
-            JLabel nameLabel = new JLabel(items[i][0]);
-            nameLabel.setFont(new Font("맑은 고딕", Font.BOLD, 12));
-            nameLabel.setForeground(Color.WHITE);
-            nameLabel.setBounds(slotX - 5, startY + slotSize + 5, slotSize + 10, 16);
-            nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            panel.add(nameLabel);
         }
 
         return panel;

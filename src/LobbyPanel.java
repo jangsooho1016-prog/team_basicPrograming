@@ -276,6 +276,17 @@ public class LobbyPanel extends JPanel {
         updateSelectionUI();
     }
 
+    /**
+     * 캐릭터 선택 카드 생성 메서드
+     * 캐릭터 이미지와 선택 상태에 따른 테두리를 그립니다.
+     * 
+     * @param name 캐릭터 이름 (배찌, 다오, 랜덤)
+     * @param img  캐릭터 이미지 (랜덤일 경우 null)
+     * @param x    패널 X 좌표
+     * @param y    패널 Y 좌표
+     * @param size 패널 크기 (정사각형)
+     * @return 생성된 JPanel 객체
+     */
     private JPanel createCharacterCard(String name, Image img, int x, int y, int size) {
         JPanel panel = new JPanel() {
             @Override
@@ -284,15 +295,15 @@ public class LobbyPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // 배경
+                // 카드 배경 (흰색 둥근 사각형)
                 g2.setColor(Color.WHITE);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
 
-                // 이미지
+                // 이미지 그리기
                 if (img != null) {
                     g2.drawImage(img, 8, 8, size - 16, size - 16, this);
                 } else {
-                    // 랜덤 물음표
+                    // 이미지가 없는 경우 (랜덤 선택) 물음표 표시
                     g2.setColor(Color.GRAY);
                     g2.setFont(new Font("맑은 고딕", Font.BOLD, 40));
                     FontMetrics fm = g2.getFontMetrics();
@@ -300,25 +311,31 @@ public class LobbyPanel extends JPanel {
                     g2.drawString("?", textX, 55);
                 }
 
-                // 테두리 (선택 상태에 따라 변경됨)
+                // [선택 상태 표시 테두리]
+                // 1P는 빨간색, 2P는 파란색 테두리로 표시합니다.
+                // 만약 1P와 2P가 같은 캐릭터를 선택했다면 겹쳐서 표시합니다.
                 boolean isP1 = p1Character.equals(name);
                 boolean isP2 = p2Character.equals(name);
 
                 if (isP1 && isP2) {
+                    // 둘 다 선택한 경우: 빨간색 바깥 테두리 + 파란색 안쪽 테두리
                     g2.setStroke(new BasicStroke(3f));
                     g2.setColor(Color.RED);
                     g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 12, 12);
                     g2.setColor(Color.BLUE);
                     g2.drawRoundRect(5, 5, getWidth() - 10, getHeight() - 10, 8, 8);
                 } else if (isP1) {
+                    // 1P만 선택: 빨간색 테두리
                     g2.setStroke(new BasicStroke(3f));
                     g2.setColor(Color.RED);
                     g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 12, 12);
                 } else if (isP2) {
+                    // 2P만 선택: 파란색 테두리
                     g2.setStroke(new BasicStroke(3f));
                     g2.setColor(Color.BLUE);
                     g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 12, 12);
                 } else {
+                    // 선택되지 않음: 회색 얇은 테두리
                     g2.setStroke(new BasicStroke(1f));
                     g2.setColor(Color.GRAY);
                     g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
@@ -328,16 +345,18 @@ public class LobbyPanel extends JPanel {
         panel.setBounds(x, y, size, size);
         panel.setOpaque(false);
 
-        // 클릭 리스너
+        // [마우스 클릭 이벤트 처리]
+        // 왼쪽 클릭: 2P 캐릭터 변경
+        // 오른쪽 클릭: 1P 캐릭터 변경
         panel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-                    p2Character = name;
+                    p2Character = name; // 2P 선택
                 } else if (SwingUtilities.isRightMouseButton(e)) {
-                    p1Character = name;
+                    p1Character = name; // 1P 선택
                 }
-                updateSelectionUI();
+                updateSelectionUI(); // 화면 갱신 (테두리 다시 그리기)
             }
         });
 

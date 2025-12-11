@@ -36,6 +36,7 @@ public class BGMPlayer {
 
     /**
      * BGM 파일 로드 및 재생 시작
+     * 기존에 재생 중이던 BGM이 있으면 정지하고 새 BGM을 재생합니다.
      * 
      * @param filePath 재생할 WAV 파일의 경로 (절대 경로 권장)
      */
@@ -45,6 +46,12 @@ public class BGMPlayer {
             if (!file.exists()) {
                 System.err.println("BGM 파일을 찾을 수 없습니다: " + filePath);
                 return;
+            }
+
+            // ★ 기존 BGM이 재생 중이면 정지 및 리소스 해제
+            if (clip != null) {
+                clip.stop();
+                clip.close();
             }
 
             // 오디오 스트림 열기
@@ -99,12 +106,15 @@ public class BGMPlayer {
         }
     }
 
-    // 일시 정지 (현재는 stop과 동일)
+    // 잠시 멈춤 기능 (현재는 정지와 동일하게 처리됨)
     public void pause() {
         stop();
     }
 
-    // 재생 재개 (처음부터가 아닌 멈춘 곳부터 재생하려면 추가 구현 필요)
+    /**
+     * 재생 재개 메서드
+     * clip.start()를 호출하면 멈춘 위치에서 이어서 재생됩니다.
+     */
     public void resume() {
         if (clip != null) {
             clip.start();

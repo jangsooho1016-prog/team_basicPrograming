@@ -48,14 +48,14 @@ public class MenuPanel extends JPanel {
 
         // [버튼 배치 설정]
         // 버튼 크기와 간격을 상수로 정의하여 유지보수 용이하게 함
-        int buttonWidth = 130;
+        int buttonWidth = 140;
         int buttonHeight = 45;
-        int gap = 15; // 버튼 사이 간격
+        int gap = 20; // 버튼 사이 간격
         int startY = 500; // 버튼이 배치될 Y 좌표
 
         // 전체 버튼 그룹의 너비를 계산하여 화면 중앙에 배치
         // 총 너비 = (버튼갯수 * 버튼너비) + (간격갯수 * 간격)
-        int startX = (PANEL_WIDTH - ((buttonWidth * 5) + (gap * 4))) / 2;
+        int startX = (PANEL_WIDTH - ((buttonWidth * 4) + (gap * 3))) / 2;
 
         // [버튼 생성 및 추가]
         // createRoundedButton 메서드를 재사용하여 일관된 디자인 적용
@@ -72,12 +72,8 @@ public class MenuPanel extends JPanel {
         add(createRoundedButton("Settings", startX + (buttonWidth + gap) * 2, startY, buttonWidth, buttonHeight,
                 e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_SETTINGS)));
 
-        // 4. 크레딧 버튼 -> 제작진 화면으로 이동
-        add(createRoundedButton("Credits", startX + (buttonWidth + gap) * 3, startY, buttonWidth, buttonHeight,
-                e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_CREDITS)));
-
-        // 5. 종료 버튼 -> 프로그램 종료
-        add(createRoundedButton("Exit", startX + (buttonWidth + gap) * 4, startY, buttonWidth, buttonHeight,
+        // 4. 종료 버튼 -> 프로그램 종료
+        add(createRoundedButton("Exit", startX + (buttonWidth + gap) * 3, startY, buttonWidth, buttonHeight,
                 e -> System.exit(0)));
     }
 
@@ -122,6 +118,7 @@ public class MenuPanel extends JPanel {
     /**
      * 커스텀 디자인 버튼 생성 팩토리 메서드
      * 둥근 모서리와 마우스 오버/클릭 시 색상 변화 효과가 있는 버튼을 생성합니다.
+     * 일반 JButton을 확장하고 paintComponent를 오버라이드하여 직접 그립니다.
      * 
      * @param text   버튼 텍스트
      * @param x      X 좌표
@@ -134,12 +131,14 @@ public class MenuPanel extends JPanel {
     private JButton createRoundedButton(String text, int x, int y, int width, int height, ActionListener action) {
         JButton btn = new JButton(text) {
             // 버튼 모양 커스터마이징을 위해 paintComponent 오버라이드
+            // 이 메서드는 버튼이 화면에 그려질 때마다 호출됩니다.
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g;
+                // 끊김 없는 부드러운 그래픽을 위한 안티앨리어싱 활성화
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // 버튼 상태에 따른 색상 변경 (상호작용 피드백)
+                // 버튼 상태(눌림, 마우스 오버, 평상시)에 따른 색상 결정
                 if (getModel().isPressed())
                     g2.setColor(ThemeColors.ACCENT); // 클릭 시 강조색
                 else if (getModel().isRollover())
@@ -147,27 +146,28 @@ public class MenuPanel extends JPanel {
                 else
                     g2.setColor(ThemeColors.MAIN); // 평상시 메인 색상
 
-                // 둥근 사각형 배경 그리기 (반지름 25)
+                // 둥근 사각형 배경 그리기 (모서리 반지름 25px)
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
 
                 // 테두리 그리기
                 g2.setColor(ThemeColors.DARK);
-                g2.setStroke(new BasicStroke(2));
+                g2.setStroke(new BasicStroke(2)); // 테두리 두께 2px
                 g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 25, 25);
 
-                // 텍스트 그리기 (super 호출)
+                // 상위 클래스의 paintComponent를 호출하여 텍스트 라벨 등을 그립니다.
+                // super를 호출하지 않으면 글자가 보이지 않습니다.
                 super.paintComponent(g);
             }
         };
 
         // 버튼 기본 속성 설정
-        btn.setBounds(x, y, width, height);
-        btn.setFont(new Font("맑은 고딕", Font.BOLD, 14));
-        btn.setForeground(ThemeColors.DARK);
-        btn.setFocusPainted(false); // 포커스 테두리 제거
-        btn.setContentAreaFilled(false); // 기본 배경 제거 (paintComponent에서 직접 그림)
-        btn.setBorderPainted(false); // 기본 테두리 제거
-        btn.addActionListener(action); // 동작 연결
+        btn.setBounds(x, y, width, height); // 위치 및 크기 설정
+        btn.setFont(new Font("맑은 고딕", Font.BOLD, 14)); // 폰트 설정
+        btn.setForeground(ThemeColors.DARK); // 글자색 설정
+        btn.setFocusPainted(false); // 포커스 테두리(점선) 제거
+        btn.setContentAreaFilled(false); // 기본 시스템 배경 제거 (위에서 직접 그렸으므로)
+        btn.setBorderPainted(false); // 기본 시스템 테두리 제거
+        btn.addActionListener(action); // 동작(클릭 이벤트) 연결
         return btn;
     }
 }
