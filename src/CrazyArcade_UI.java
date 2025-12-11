@@ -67,6 +67,9 @@ public class CrazyArcade_UI extends JFrame {
         // 창을 보이게 설정
         setVisible(true);
 
+        // 커스텀 커서 전역 적용
+        loadCustomCursor();
+
         // 프로그램 시작 시 메뉴 화면 표시 및 BGM 재생
         showPanel(PANEL_MENU);
         startBGM();
@@ -116,6 +119,25 @@ public class CrazyArcade_UI extends JFrame {
 
         // BGM 로드 및 재생
         BGMPlayer.getInstance().loadAndPlay(bgmPath);
+    }
+
+    /**
+     * 커스텀 커서를 로드하여 전역 적용합니다.
+     * 모든 화면에서 동일한 커서가 표시됩니다.
+     */
+    private void loadCustomCursor() {
+        try {
+            String cursorPath = System.getProperty("user.dir") + File.separator + "res" + File.separator + "cursor.png";
+            File cursorFile = new File(cursorPath);
+            if (cursorFile.exists()) {
+                Image cursorImg = javax.imageio.ImageIO.read(cursorFile);
+                Cursor customCursor = Toolkit.getDefaultToolkit().createCustomCursor(
+                        cursorImg, new java.awt.Point(0, 0), "CustomCursor");
+                setCursor(customCursor);
+            }
+        } catch (Exception e) {
+            System.err.println("커서 로드 실패: " + e.getMessage());
+        }
     }
 
     /**

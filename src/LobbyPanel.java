@@ -57,18 +57,18 @@ public class LobbyPanel extends JPanel {
 
         // ========== 왼쪽 영역 (1P/2P 표시 + 채팅) ==========
 
-        // 왼쪽 상단: 1P/2P 캐릭터 표시 박스
+        // 왼쪽 상단: 1P/2P 캐릭터 표시 박스 (크레이지 아케이드 스타일)
         JPanel leftTopBox = new JPanel(null) {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 255, 255, 200));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-                g2.setColor(Color.DARK_GRAY);
+                g2.setColor(new Color(50, 50, 50, 220));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2.setColor(new Color(100, 180, 255));
                 g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 20, 20);
             }
         };
         leftTopBox.setBounds(30, 60, 370, 200);
@@ -83,18 +83,18 @@ public class LobbyPanel extends JPanel {
         JPanel p2Panel = createPlayerDisplayPanel("2P", 190, 15, 165, 170);
         leftTopBox.add(p2Panel);
 
-        // 왼쪽 하단: 채팅 영역
+        // 왼쪽 하단: 채팅 영역 (크레이지 아케이드 스타일)
         JPanel chatBox = new JPanel(null) {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 255, 255, 200));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-                g2.setColor(Color.DARK_GRAY);
+                g2.setColor(new Color(50, 50, 50, 220));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2.setColor(new Color(100, 180, 255));
                 g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 20, 20);
             }
         };
         chatBox.setBounds(30, 275, 370, 280);
@@ -104,6 +104,7 @@ public class LobbyPanel extends JPanel {
         // 채팅 라벨
         JLabel chatLabel = new JLabel("채팅");
         chatLabel.setFont(new Font("맑은 고딕", Font.BOLD, 16));
+        chatLabel.setForeground(Color.WHITE);
         chatLabel.setBounds(15, 10, 100, 25);
         chatBox.add(chatLabel);
 
@@ -343,7 +344,7 @@ public class LobbyPanel extends JPanel {
         return panel;
     }
 
-    // 현재 선택된 플레이어 정보 표시 패널 (1P / 2P)
+    // 현재 선택된 플레이어 정보 표시 패널 (1P / 2P) + 캐릭터 능력치 표시
     private JPanel createPlayerDisplayPanel(String playerLabel, int x, int y, int width, int height) {
         JPanel panel = new JPanel() {
             @Override
@@ -365,13 +366,13 @@ public class LobbyPanel extends JPanel {
                 g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
 
                 // 상단 플레이어 라벨
-                g2.setFont(new Font("Arial", Font.BOLD, 16));
+                g2.setFont(new Font("Arial", Font.BOLD, 14));
                 if (playerLabel.equals("1P"))
                     g2.setColor(new Color(220, 80, 80));
                 else
                     g2.setColor(new Color(80, 80, 220));
                 int labelW = g2.getFontMetrics().stringWidth(playerLabel);
-                g2.drawString(playerLabel, (getWidth() - labelW) / 2, 22);
+                g2.drawString(playerLabel, (getWidth() - labelW) / 2, 18);
 
                 // 캐릭터 이미지 표시
                 String charName = playerLabel.equals("1P") ? p1Character : p2Character;
@@ -382,22 +383,92 @@ public class LobbyPanel extends JPanel {
                     showImg = daoImg;
 
                 if (showImg != null) {
-                    int imgSize = 80;
-                    g2.drawImage(showImg, (getWidth() - imgSize) / 2, 35, imgSize, imgSize, this);
+                    int imgSize = 50;
+                    g2.drawImage(showImg, 10, 25, imgSize, imgSize, this);
                 } else if (charName.equals("랜덤")) {
                     g2.setColor(Color.DARK_GRAY);
-                    g2.setFont(new Font("맑은 고딕", Font.BOLD, 45));
-                    FontMetrics fm = g2.getFontMetrics();
-                    int qX = (getWidth() - fm.stringWidth("?")) / 2;
-                    g2.drawString("?", qX, 90);
+                    g2.setFont(new Font("맑은 고딕", Font.BOLD, 30));
+                    g2.drawString("?", 28, 60);
                 }
 
-                // 캐릭터 이름 텍스트
+                // 캐릭터 이름
                 g2.setColor(Color.BLACK);
-                g2.setFont(new Font("맑은 고딕", Font.BOLD, 14));
-                String displayName = charName;
-                int textW = g2.getFontMetrics().stringWidth(displayName);
-                g2.drawString(displayName, (getWidth() - textW) / 2, 140);
+                g2.setFont(new Font("맑은 고딕", Font.BOLD, 12));
+                g2.drawString(charName, 65, 40);
+
+                // 캐릭터 설명 (작은 글씨)
+                g2.setFont(new Font("맑은 고딕", Font.PLAIN, 9));
+                g2.setColor(Color.GRAY);
+                if (charName.equals("배찌")) {
+                    g2.drawString("강점: Speed", 65, 52);
+                    g2.drawString("빠른 속도의 캐릭터", 65, 63);
+                } else if (charName.equals("다오")) {
+                    g2.drawString("강점: Normal", 65, 52);
+                    g2.drawString("균형잡힌 캐릭터", 65, 63);
+                } else {
+                    g2.drawString("랜덤 선택", 65, 52);
+                }
+
+                // 능력치 게이지 표시
+                int gaugeX = 10;
+                int gaugeY = 85;
+                int gaugeWidth = 100;
+                int gaugeHeight = 12;
+                int gap = 5;
+
+                // 능력치 값 (캐릭터별)
+                int bombCount, waterLength, speed;
+                if (charName.equals("배찌")) {
+                    bombCount = 4;
+                    waterLength = 5;
+                    speed = 7; // 배찌: 속도 특화
+                } else if (charName.equals("다오")) {
+                    bombCount = 5;
+                    waterLength = 5;
+                    speed = 5; // 다오: 균형형
+                } else {
+                    bombCount = 5;
+                    waterLength = 5;
+                    speed = 5; // 랜덤: 기본
+                }
+
+                // 개 수 (폭탄 개수)
+                drawStatBar(g2, "개 수", gaugeX, gaugeY, gaugeWidth, gaugeHeight, bombCount, new Color(255, 180, 50));
+                // 물줄기
+                drawStatBar(g2, "물줄기", gaugeX, gaugeY + gaugeHeight + gap, gaugeWidth, gaugeHeight, waterLength,
+                        new Color(100, 200, 100));
+                // 속 도
+                drawStatBar(g2, "속 도", gaugeX, gaugeY + (gaugeHeight + gap) * 2, gaugeWidth, gaugeHeight, speed,
+                        new Color(100, 150, 255));
+            }
+
+            // 능력치 바 그리기 헬퍼 메서드
+            private void drawStatBar(Graphics2D g2, String label, int x, int y, int width, int height, int value,
+                    Color color) {
+                // 라벨
+                g2.setColor(Color.DARK_GRAY);
+                g2.setFont(new Font("맑은 고딕", Font.BOLD, 10));
+                g2.drawString(label, x, y + height - 2);
+
+                // 게이지 바 시작 위치 (라벨 뒤)
+                int barX = x + 40;
+                int barWidth = width;
+                int cellWidth = barWidth / 8;
+                int maxCells = 8;
+
+                // 각 셀 그리기
+                for (int i = 0; i < maxCells; i++) {
+                    int cellX = barX + i * (cellWidth + 2);
+                    if (i < value) {
+                        g2.setColor(color);
+                        g2.fillRect(cellX, y, cellWidth, height);
+                    } else {
+                        g2.setColor(new Color(220, 220, 220));
+                        g2.fillRect(cellX, y, cellWidth, height);
+                    }
+                    g2.setColor(new Color(180, 180, 180));
+                    g2.drawRect(cellX, y, cellWidth, height);
+                }
             }
         };
         panel.setBounds(x, y, width, height);

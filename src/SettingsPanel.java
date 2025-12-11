@@ -22,11 +22,11 @@ public class SettingsPanel extends JPanel {
     private static final int PANEL_HEIGHT = 600;
     private CrazyArcade_UI mainFrame;
 
-    // 바나나 테마 색상 정의 (내부적으로만 사용하는 색상 상수가 있을 경우)
-    private final Color COLOR_BG = new Color(255, 250, 205); // 배경 (연한 크림색)
-    private final Color COLOR_MAIN = new Color(255, 225, 53); // 메인 노랑 (바나나)
-    private final Color COLOR_DARK = new Color(139, 69, 19); // 갈색 (초코/껍질)
-    private final Color COLOR_HIGHLIGHT = new Color(255, 240, 150);
+    // 크레이지 아케이드 스타일 색상 정의
+    private final Color COLOR_BG = new Color(230, 245, 255); // 배경 (연한 하늘색)
+    private final Color COLOR_MAIN = new Color(80, 160, 255); // 메인 파란색
+    private final Color COLOR_DARK = new Color(40, 80, 160); // 진한 파란색
+    private final Color COLOR_HIGHLIGHT = new Color(140, 200, 255); // 밝은 파란색
 
     /**
      * 생성자: 설정 화면 UI 구성 (탭 패널 포함)
@@ -130,16 +130,16 @@ public class SettingsPanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 Rectangle t = trackRect;
 
-                // 트랙 배경 (연한 노랑)
-                g2.setColor(new Color(255, 240, 180));
+                // 트랙 배경 (연한 파란색)
+                g2.setColor(new Color(200, 225, 255));
                 g2.fillRoundRect(t.x, t.y + t.height / 3, t.width, t.height / 3, 15, 15);
 
-                // 트랙 테두리 (갈색)
+                // 트랙 테두리 (진한 파란색)
                 g2.setColor(COLOR_DARK);
                 g2.setStroke(new BasicStroke(2));
                 g2.drawRoundRect(t.x, t.y + t.height / 3, t.width, t.height / 3, 15, 15);
 
-                // 채워진 부분 (진한 노랑 - 현재 값)
+                // 채워진 부분 (메인 파란색 - 현재 값)
                 int fillWidth = (int) (t.width * ((double) slider.getValue() / slider.getMaximum()));
                 g2.setColor(COLOR_MAIN);
                 g2.fillRoundRect(t.x, t.y + t.height / 3 + 2, fillWidth, t.height / 3 - 4, 10, 10);
@@ -210,7 +210,7 @@ public class SettingsPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 // 배경 박스 (둥근 사각형)
-                g2.setColor(new Color(255, 255, 240)); // 아주 연한 아이보리
+                g2.setColor(new Color(230, 245, 255)); // 연한 하늘색
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 40, 40);
                 // 테두리
                 g2.setColor(COLOR_DARK);

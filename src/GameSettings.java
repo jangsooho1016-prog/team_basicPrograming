@@ -48,24 +48,24 @@ public class GameSettings {
             props.load(fis);
 
             // 볼륨 설정 로드
-            bgmVolume = Integer.parseInt(props.getProperty("bgmVolume", "50"));
-            sfxVolume = Integer.parseInt(props.getProperty("sfxVolume", "50"));
+            bgmVolume = parseValue(props.getProperty("bgmVolume", "50"));
+            sfxVolume = parseValue(props.getProperty("sfxVolume", "50"));
 
             // Player 1 키 매핑 로드
-            p1_Up = Integer.parseInt(props.getProperty("p1_Up", String.valueOf(KeyEvent.VK_W)));
-            p1_Down = Integer.parseInt(props.getProperty("p1_Down", String.valueOf(KeyEvent.VK_S)));
-            p1_Left = Integer.parseInt(props.getProperty("p1_Left", String.valueOf(KeyEvent.VK_A)));
-            p1_Right = Integer.parseInt(props.getProperty("p1_Right", String.valueOf(KeyEvent.VK_D)));
-            p1_Bomb = Integer.parseInt(props.getProperty("p1_Bomb", String.valueOf(KeyEvent.VK_SHIFT)));
-            p1_Item = Integer.parseInt(props.getProperty("p1_Item", String.valueOf(KeyEvent.VK_CONTROL)));
+            p1_Up = parseValue(props.getProperty("p1_Up", String.valueOf(KeyEvent.VK_W)));
+            p1_Down = parseValue(props.getProperty("p1_Down", String.valueOf(KeyEvent.VK_S)));
+            p1_Left = parseValue(props.getProperty("p1_Left", String.valueOf(KeyEvent.VK_A)));
+            p1_Right = parseValue(props.getProperty("p1_Right", String.valueOf(KeyEvent.VK_D)));
+            p1_Bomb = parseValue(props.getProperty("p1_Bomb", String.valueOf(KeyEvent.VK_SHIFT)));
+            p1_Item = parseValue(props.getProperty("p1_Item", String.valueOf(KeyEvent.VK_CONTROL)));
 
             // Player 2 키 매핑 로드
-            p2_Up = Integer.parseInt(props.getProperty("p2_Up", String.valueOf(KeyEvent.VK_UP)));
-            p2_Down = Integer.parseInt(props.getProperty("p2_Down", String.valueOf(KeyEvent.VK_DOWN)));
-            p2_Left = Integer.parseInt(props.getProperty("p2_Left", String.valueOf(KeyEvent.VK_LEFT)));
-            p2_Right = Integer.parseInt(props.getProperty("p2_Right", String.valueOf(KeyEvent.VK_RIGHT)));
-            p2_Bomb = Integer.parseInt(props.getProperty("p2_Bomb", String.valueOf(KeyEvent.VK_NUMPAD1)));
-            p2_Item = Integer.parseInt(props.getProperty("p2_Item", String.valueOf(KeyEvent.VK_NUMPAD0)));
+            p2_Up = parseValue(props.getProperty("p2_Up", String.valueOf(KeyEvent.VK_UP)));
+            p2_Down = parseValue(props.getProperty("p2_Down", String.valueOf(KeyEvent.VK_DOWN)));
+            p2_Left = parseValue(props.getProperty("p2_Left", String.valueOf(KeyEvent.VK_LEFT)));
+            p2_Right = parseValue(props.getProperty("p2_Right", String.valueOf(KeyEvent.VK_RIGHT)));
+            p2_Bomb = parseValue(props.getProperty("p2_Bomb", String.valueOf(KeyEvent.VK_NUMPAD1)));
+            p2_Item = parseValue(props.getProperty("p2_Item", String.valueOf(KeyEvent.VK_NUMPAD0)));
 
             System.out.println("설정 로드 완료: " + SETTINGS_FILE);
         } catch (IOException | NumberFormatException e) {
@@ -74,34 +74,55 @@ public class GameSettings {
     }
 
     /**
+     * 값에서 주석(# 이후)을 제거하고 정수로 변환합니다.
+     */
+    private static int parseValue(String value) {
+        if (value == null)
+            return 0;
+        // # 이후 주석 제거
+        if (value.contains("#")) {
+            value = value.substring(0, value.indexOf("#"));
+        }
+        return Integer.parseInt(value.trim());
+    }
+
+    /**
      * 현재 설정을 파일에 저장합니다.
      * 설정 변경 시 호출하여 영구적으로 저장합니다.
+     * 키 코드 옆에 실제 키 이름을 주석으로 추가합니다.
      */
     public static void saveSettings() {
-        Properties props = new Properties();
+        try (java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.FileWriter(SETTINGS_FILE))) {
+            writer.println("# CrazyArcade Settings");
+            writer.println(
+                    "# 저장 시간: " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+            writer.println();
 
-        // 볼륨 설정 저장
-        props.setProperty("bgmVolume", String.valueOf(bgmVolume));
-        props.setProperty("sfxVolume", String.valueOf(sfxVolume));
+            // 볼륨 설정 저장
+            writer.println("# === 사운드 설정 ===");
+            writer.println("bgmVolume=" + bgmVolume);
+            writer.println("sfxVolume=" + sfxVolume);
+            writer.println();
 
-        // Player 1 키 매핑 저장
-        props.setProperty("p1_Up", String.valueOf(p1_Up));
-        props.setProperty("p1_Down", String.valueOf(p1_Down));
-        props.setProperty("p1_Left", String.valueOf(p1_Left));
-        props.setProperty("p1_Right", String.valueOf(p1_Right));
-        props.setProperty("p1_Bomb", String.valueOf(p1_Bomb));
-        props.setProperty("p1_Item", String.valueOf(p1_Item));
+            // Player 1 키 매핑 저장
+            writer.println("# === Player 1 조작키 ===");
+            writer.println("p1_Up=" + p1_Up + "    # " + KeyEvent.getKeyText(p1_Up));
+            writer.println("p1_Down=" + p1_Down + "    # " + KeyEvent.getKeyText(p1_Down));
+            writer.println("p1_Left=" + p1_Left + "    # " + KeyEvent.getKeyText(p1_Left));
+            writer.println("p1_Right=" + p1_Right + "    # " + KeyEvent.getKeyText(p1_Right));
+            writer.println("p1_Bomb=" + p1_Bomb + "    # " + KeyEvent.getKeyText(p1_Bomb));
+            writer.println("p1_Item=" + p1_Item + "    # " + KeyEvent.getKeyText(p1_Item));
+            writer.println();
 
-        // Player 2 키 매핑 저장
-        props.setProperty("p2_Up", String.valueOf(p2_Up));
-        props.setProperty("p2_Down", String.valueOf(p2_Down));
-        props.setProperty("p2_Left", String.valueOf(p2_Left));
-        props.setProperty("p2_Right", String.valueOf(p2_Right));
-        props.setProperty("p2_Bomb", String.valueOf(p2_Bomb));
-        props.setProperty("p2_Item", String.valueOf(p2_Item));
+            // Player 2 키 매핑 저장
+            writer.println("# === Player 2 조작키 ===");
+            writer.println("p2_Up=" + p2_Up + "    # " + KeyEvent.getKeyText(p2_Up));
+            writer.println("p2_Down=" + p2_Down + "    # " + KeyEvent.getKeyText(p2_Down));
+            writer.println("p2_Left=" + p2_Left + "    # " + KeyEvent.getKeyText(p2_Left));
+            writer.println("p2_Right=" + p2_Right + "    # " + KeyEvent.getKeyText(p2_Right));
+            writer.println("p2_Bomb=" + p2_Bomb + "    # " + KeyEvent.getKeyText(p2_Bomb));
+            writer.println("p2_Item=" + p2_Item + "    # " + KeyEvent.getKeyText(p2_Item));
 
-        try (FileOutputStream fos = new FileOutputStream(SETTINGS_FILE)) {
-            props.store(fos, "CrazyArcade Settings");
             System.out.println("설정 저장 완료: " + SETTINGS_FILE);
         } catch (IOException e) {
             System.err.println("설정 저장 실패: " + e.getMessage());
