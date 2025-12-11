@@ -101,7 +101,7 @@ public class GamePanelPlaceholder extends JPanel {
     private boolean p2Alive = true;
 
     // 결과 이미지 리소스
-    private Image winImg, loseImg, drawImg;
+    private Image winImg, drawImg;
     private long resultDisplayTime = 0; // 결과 화면 표시 시작 시간
     private static final int RESULT_DISPLAY_DURATION = 3000; // 결과 표시 지속 시간
 
@@ -786,11 +786,6 @@ public class GamePanelPlaceholder extends JPanel {
                 winImg = makeTransparent(ImageIO.read(winFile));
             }
 
-            File loseFile = new File(basePath + "lose.bmp");
-            if (loseFile.exists()) {
-                loseImg = makeTransparent(ImageIO.read(loseFile));
-            }
-
             File drawFile = new File(basePath + "draw.bmp");
             if (drawFile.exists()) {
                 drawImg = makeTransparent(ImageIO.read(drawFile));
@@ -918,9 +913,9 @@ public class GamePanelPlaceholder extends JPanel {
         if (gameState == STATE_DRAW) {
             resultImg = drawImg;
         } else if (gameState == STATE_P1_WIN) {
-            resultImg = winImg; // 1P 기준 승리
+            resultImg = winImg; // 1P 승리 -> WIN 이미지
         } else if (gameState == STATE_P2_WIN) {
-            resultImg = loseImg; // 1P 기준 패배
+            resultImg = winImg; // 2P 승리 -> WIN 이미지 (승자 기준 통일)
         }
 
         // 결과 이미지 그리기
