@@ -2,211 +2,421 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import javax.imageio.ImageIO;
 import java.io.File;
+import java.io.IOException;
 
 /**
  * ========================================================
- * LobbyPanel 클래스 - 게임 로비 화면
+ * 5. 대기실 (Lobby) 화면 패널
  * ========================================================
- * 
- * [클래스 설명]
- * - 게임 시작 전 대기실 화면입니다.
- * - 캐릭터 선택, 맵 정보 확인, 채팅 기능을 제공합니다.
- * 
- * [화면 구성]
- * - 좌측: 캐릭터 선택 패널 (배찌, 다오)
- * - 우측 상단: 맵 정보 패널
- * - 우측 하단: 채팅 패널 (실시간 채팅)
- * - 하단: 뒤로가기, 게임 시작 버튼
- * 
- * [화면 흐름]
- * - 뒤로 → MenuPanel (메뉴)
- * - 게임 시작 → GamePanelPlaceholder (게임)
- * 
- * @author 팀원 공동 작업
- * @version 1.0
+ * 사용자 요청 반영:
+ * - 왼쪽: 1P/2P 캐릭터 표시 (상단) + 채팅창 (하단)
+ * - 오른쪽: 캐릭터 선택 (상단) + 게임시작/뒤로 버튼 (하단)
  */
 public class LobbyPanel extends JPanel {
-
-    // ============================================
-    // 멤버 변수 (필드)
-    // ============================================
-
-    /** 메인 프레임 참조 (화면 전환에 사용) */
     private CrazyArcade_UI mainFrame;
+    private String p1Character = "배찌"; // 기본값
+    private String p2Character = "다오"; // 기본값
+    private Cursor customCursor;
 
-    /** 현재 선택된 캐릭터 이름 (기본: 배찌) */
-    private String selectedCharacter = "배찌";
+    // 캐릭터 이미지
+    private Image bazziImg;
+    private Image daoImg;
 
-    /**
-     * ============================================
-     * 생성자 - 로비 패널 초기화
-     * ============================================
-     * 
-     * [수행 작업]
-     * 1. 타이틀 라벨 생성
-     * 2. 캐릭터 선택 패널 생성
-     * 3. 맵 정보 패널 생성
-     * 4. 채팅 패널 생성
-     * 5. 하단 버튼 생성 (뒤로, 게임 시작)
-     * 
-     * @param mainFrame 메인 프레임 참조 (화면 전환에 사용)
-     */
+    // UI 컴포넌트
+    private JTextArea chatArea;
+    private JTextField chatInput;
+
+    // 선택 카드 (피드백용)
+    private JPanel cardBazzi, cardDao, cardRandom;
+
+    // 맵 선택
+    private String selectedMap = "Map1"; // 기본값
+    private Image map1Img, map2Img;
+    private JPanel mapCard1, mapCard2;
+
     public LobbyPanel(CrazyArcade_UI mainFrame) {
         this.mainFrame = mainFrame;
+        setLayout(null);
+        setBackground(new Color(240, 240, 255)); // 밝은 배경색
+        setPreferredSize(new Dimension(800, 600));
 
-        // ----- 패널 기본 설정 -----
-        setLayout(null); // 절대 좌표 레이아웃 사용
-        setBackground(ThemeColors.BG); // 바나나 테마 배경색
+        loadCharacterImages();
+        loadCustomCursor();
 
-        // ===== 1. 타이틀 라벨 =====
-        JLabel titleLabel = new JLabel("게임 로비 / Game Lobby");
+        // 1. 상단 타이틀
+        JLabel titleLabel = new JLabel("Game Lobby");
         titleLabel.setFont(new Font("맑은 고딕", Font.BOLD, 30));
-        titleLabel.setForeground(ThemeColors.DARK);
-        titleLabel.setBounds(30, 20, 500, 40);
+        titleLabel.setBounds(30, 15, 300, 40);
         add(titleLabel);
 
-        // ===== 2. 캐릭터 선택 패널 =====
-        JPanel charPanel = createPanel("캐릭터 선택", 30, 80, 250, 400);
+        // ========== 왼쪽 영역 (1P/2P 표시 + 채팅) ==========
 
-        // 배찌 캐릭터 카드 생성
-        JPanel bazziCard = createCharacterCard("배찌", "배찌.png");
-        bazziCard.setBounds(15, 40, 220, 160);
-        charPanel.add(bazziCard);
-
-        // 다오 캐릭터 카드 생성
-        JPanel daoCard = createCharacterCard("다오", "다오.png");
-        daoCard.setBounds(15, 210, 220, 160);
-        charPanel.add(daoCard);
-
-        // ----- 캐릭터 선택 이벤트 처리 -----
-        // 상호 배타적 선택: 하나를 선택하면 다른 것은 해제
-        bazziCard.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                selectedCharacter = "배찌";
-                // 선택된 카드에 강조 테두리, 미선택 카드에 일반 테두리
-                bazziCard.setBorder(BorderFactory.createLineBorder(ThemeColors.ACCENT, 4));
-                daoCard.setBorder(BorderFactory.createLineBorder(ThemeColors.DARK, 2));
+        // 왼쪽 상단: 1P/2P 캐릭터 표시 박스
+        JPanel leftTopBox = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(255, 255, 255, 200));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.setColor(Color.DARK_GRAY);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
             }
-        });
+        };
+        leftTopBox.setBounds(30, 60, 370, 200);
+        leftTopBox.setOpaque(false);
+        add(leftTopBox);
 
-        daoCard.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                selectedCharacter = "다오";
-                // 선택된 카드에 강조 테두리, 미선택 카드에 일반 테두리
-                daoCard.setBorder(BorderFactory.createLineBorder(ThemeColors.ACCENT, 4));
-                bazziCard.setBorder(BorderFactory.createLineBorder(ThemeColors.DARK, 2));
+        // 1P 표시 (왼쪽 상단 박스 내부 왼쪽)
+        JPanel p1Panel = createPlayerDisplayPanel("1P", 15, 15, 165, 170);
+        leftTopBox.add(p1Panel);
+
+        // 2P 표시 (왼쪽 상단 박스 내부 오른쪽)
+        JPanel p2Panel = createPlayerDisplayPanel("2P", 190, 15, 165, 170);
+        leftTopBox.add(p2Panel);
+
+        // 왼쪽 하단: 채팅 영역
+        JPanel chatBox = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(255, 255, 255, 200));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                g2.setColor(Color.DARK_GRAY);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
             }
-        });
+        };
+        chatBox.setBounds(30, 275, 370, 280);
+        chatBox.setOpaque(false);
+        add(chatBox);
 
-        // 기본 선택: 배찌 (강조 테두리 적용)
-        bazziCard.setBorder(BorderFactory.createLineBorder(ThemeColors.ACCENT, 4));
+        // 채팅 라벨
+        JLabel chatLabel = new JLabel("채팅");
+        chatLabel.setFont(new Font("맑은 고딕", Font.BOLD, 16));
+        chatLabel.setBounds(15, 10, 100, 25);
+        chatBox.add(chatLabel);
 
-        add(charPanel);
+        // 채팅 영역 구성
+        chatArea = new JTextArea();
+        chatArea.setEditable(false);
+        chatArea.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+        JScrollPane scroll = new JScrollPane(chatArea);
+        scroll.setBounds(15, 40, 340, 190);
+        chatBox.add(scroll);
 
-        // ===== 3. 맵 정보 패널 =====
-        JPanel mapPanel = createPanel("맵 정보", 300, 80, 450, 200);
+        chatInput = new JTextField();
+        chatInput.setBounds(15, 240, 250, 28);
+        chatBox.add(chatInput);
 
-        JLabel mapText = new JLabel("맵: 숲속마을 01");
-        mapText.setFont(new Font("맑은 고딕", Font.BOLD, 20));
-        mapText.setForeground(ThemeColors.TEXT);
-        mapText.setBounds(20, 80, 300, 30);
-        mapPanel.add(mapText);
-
-        add(mapPanel);
-
-        // ===== 4. 채팅 패널 =====
-        JPanel chatPanel = createPanel("채팅", 300, 300, 450, 180);
-
-        // ----- 채팅 메시지 표시 영역 -----
-        JTextArea chatArea = new JTextArea();
-        chatArea.setEditable(false); // 읽기 전용 (직접 입력 불가)
-        chatArea.setFont(new Font("맑은 고딕", Font.PLAIN, 13));
-        chatArea.setLineWrap(true); // 자동 줄바꿈
-        chatArea.setWrapStyleWord(true); // 단어 단위로 줄바꿈
-        chatArea.setBackground(new Color(255, 255, 250));
-
-        // 스크롤 가능하도록 JScrollPane으로 감싸기
-        JScrollPane chatScroll = new JScrollPane(chatArea);
-        chatScroll.setBounds(10, 30, 430, 100);
-        chatScroll.setBorder(BorderFactory.createLineBorder(ThemeColors.DARK, 1));
-        chatPanel.add(chatScroll);
-
-        // ----- 채팅 입력 필드 -----
-        JTextField inputField = new JTextField();
-        inputField.setBounds(10, 140, 350, 30);
-        inputField.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
-        chatPanel.add(inputField);
-
-        // ----- 전송 버튼 -----
-        JButton sendBtn = createThemedButton("전송", 370, 140, 70, 30);
+        JButton sendBtn = new JButton("전송");
+        sendBtn.setBounds(275, 240, 70, 28);
         sendBtn.addActionListener(e -> {
-            String msg = inputField.getText().trim(); // 입력 텍스트 (공백 제거)
-            if (!msg.isEmpty()) {
-                // 채팅 영역에 메시지 추가 (캐릭터이름: 메시지 형식)
-                chatArea.append(selectedCharacter + ": " + msg + "\n");
-                inputField.setText(""); // 입력 필드 초기화
-                // 스크롤을 맨 아래로 이동 (최신 메시지 보이도록)
+            String text = chatInput.getText().trim();
+            if (!text.isEmpty()) {
+                chatArea.append("User: " + text + "\n");
+                chatInput.setText("");
                 chatArea.setCaretPosition(chatArea.getDocument().getLength());
             }
         });
+        chatInput.addActionListener(e -> sendBtn.doClick()); // 엔터키 처리
+        chatBox.add(sendBtn);
 
-        // 엔터키로도 메시지 전송 가능
-        inputField.addActionListener(e -> sendBtn.doClick());
+        // ========== 오른쪽 영역 (캐릭터 선택 + 버튼) ==========
 
-        chatPanel.add(sendBtn);
-        add(chatPanel);
+        // 오른쪽 상단: 캐릭터 선택 영역
+        JPanel rightTopBox = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(50, 50, 50, 220));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 20, 20);
+            }
+        };
+        rightTopBox.setBounds(420, 60, 350, 250);
+        rightTopBox.setOpaque(false);
+        add(rightTopBox);
 
-        // ===== 5. 하단 버튼 =====
+        // 캐릭터 선택 라벨
+        JLabel selectLabel = new JLabel("캐릭터 선택");
+        selectLabel.setFont(new Font("맑은 고딕", Font.BOLD, 18));
+        selectLabel.setForeground(Color.WHITE);
+        selectLabel.setBounds(120, 15, 150, 25);
+        rightTopBox.add(selectLabel);
 
-        // 뒤로가기 버튼 → 메뉴 화면으로 이동
-        JButton backBtn = createThemedButton("뒤로", 30, 500, 150, 50);
-        backBtn.addActionListener(e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_MENU));
-        add(backBtn);
+        // 조작 안내
+        JLabel hintLabel = new JLabel("(우클릭: 1P, 좌클릭: 2P)");
+        hintLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+        hintLabel.setForeground(Color.LIGHT_GRAY);
+        hintLabel.setBounds(100, 42, 200, 20);
+        rightTopBox.add(hintLabel);
 
-        // 게임 시작 버튼 → 게임 화면으로 이동
-        JButton startBtn = createStartButton("게임 시작!");
-        startBtn.setBounds(600, 500, 150, 50);
+        // 캐릭터 카드들 (배찌, 다오, 랜덤)
+        int cardSize = 80;
+        int cardY = 75;
+        int gap = 25;
+        int startX = (350 - (cardSize * 3 + gap * 2)) / 2;
+
+        cardBazzi = createCharacterCard("배찌", bazziImg, startX, cardY, cardSize);
+        rightTopBox.add(cardBazzi);
+
+        cardDao = createCharacterCard("다오", daoImg, startX + cardSize + gap, cardY, cardSize);
+        rightTopBox.add(cardDao);
+
+        cardRandom = createCharacterCard("랜덤", null, startX + (cardSize + gap) * 2, cardY, cardSize);
+        rightTopBox.add(cardRandom);
+
+        // 캐릭터 이름 라벨들
+        JLabel bazziLabel = new JLabel("배찌", SwingConstants.CENTER);
+        bazziLabel.setFont(new Font("맑은 고딕", Font.BOLD, 12));
+        bazziLabel.setForeground(Color.WHITE);
+        bazziLabel.setBounds(startX, cardY + cardSize + 5, cardSize, 20);
+        rightTopBox.add(bazziLabel);
+
+        JLabel daoLabel = new JLabel("다오", SwingConstants.CENTER);
+        daoLabel.setFont(new Font("맑은 고딕", Font.BOLD, 12));
+        daoLabel.setForeground(Color.WHITE);
+        daoLabel.setBounds(startX + cardSize + gap, cardY + cardSize + 5, cardSize, 20);
+        rightTopBox.add(daoLabel);
+
+        JLabel randomLabel = new JLabel("랜덤", SwingConstants.CENTER);
+        randomLabel.setFont(new Font("맑은 고딕", Font.BOLD, 12));
+        randomLabel.setForeground(Color.WHITE);
+        randomLabel.setBounds(startX + (cardSize + gap) * 2, cardY + cardSize + 5, cardSize, 20);
+        rightTopBox.add(randomLabel);
+
+        // 현재 선택 상태 표시
+        JLabel statusLabel = new JLabel("1P: 배찌 / 2P: 다오", SwingConstants.CENTER);
+        statusLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 12));
+        statusLabel.setForeground(Color.YELLOW);
+        statusLabel.setBounds(75, 200, 200, 20);
+        statusLabel.setName("statusLabel");
+        rightTopBox.add(statusLabel);
+
+        // 오른쪽 하단: 맵 선택 + 버튼 영역
+        JPanel rightBottomBox = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(50, 50, 50, 220));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 20, 20);
+            }
+        };
+        rightBottomBox.setBounds(420, 325, 350, 230);
+        rightBottomBox.setOpaque(false);
+        add(rightBottomBox);
+
+        // 맵 선택 라벨
+        JLabel mapSelectLabel = new JLabel("맵 선택", SwingConstants.CENTER);
+        mapSelectLabel.setFont(new Font("맑은 고딕", Font.BOLD, 14));
+        mapSelectLabel.setForeground(Color.WHITE);
+        mapSelectLabel.setBounds(0, 10, 350, 20);
+        rightBottomBox.add(mapSelectLabel);
+
+        // 맵 이미지 로드
+        loadMapImages();
+
+        // 맵 선택 카드들
+        int mapCardWidth = 100;
+        int mapCardHeight = 70;
+        int mapGap = 30;
+        int mapStartX = (350 - (mapCardWidth * 2 + mapGap)) / 2;
+
+        mapCard1 = createMapCard("Map1", map1Img, mapStartX, 35, mapCardWidth, mapCardHeight);
+        rightBottomBox.add(mapCard1);
+
+        mapCard2 = createMapCard("Map2", map2Img, mapStartX + mapCardWidth + mapGap, 35, mapCardWidth, mapCardHeight);
+        rightBottomBox.add(mapCard2);
+
+        // 맵 이름 라벨
+        JLabel map1Label = new JLabel("Map 1", SwingConstants.CENTER);
+        map1Label.setFont(new Font("맑은 고딕", Font.BOLD, 11));
+        map1Label.setForeground(Color.WHITE);
+        map1Label.setBounds(mapStartX, 35 + mapCardHeight + 3, mapCardWidth, 15);
+        rightBottomBox.add(map1Label);
+
+        JLabel map2Label = new JLabel("Map 2", SwingConstants.CENTER);
+        map2Label.setFont(new Font("맑은 고딕", Font.BOLD, 11));
+        map2Label.setForeground(Color.WHITE);
+        map2Label.setBounds(mapStartX + mapCardWidth + mapGap, 35 + mapCardHeight + 3, mapCardWidth, 15);
+        rightBottomBox.add(map2Label);
+
+        // 게임 시작 버튼
+        JButton startBtn = createStyledButton("게임 시작", 75, 130, 200, 45, new Color(255, 200, 0));
         startBtn.addActionListener(e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_GAME));
-        add(startBtn);
+        rightBottomBox.add(startBtn);
+
+        // 뒤로 가기 버튼
+        JButton backBtn = createStyledButton("메인으로", 75, 182, 200, 38, new Color(200, 200, 200));
+        backBtn.addActionListener(e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_MENU));
+        rightBottomBox.add(backBtn);
+
+        // 초기 UI 갱신 (선택 테두리 등)
+        updateSelectionUI();
     }
 
-    /**
-     * ============================================
-     * createThemedButton() - 테마 버튼 생성
-     * ============================================
-     * 
-     * [설명]
-     * - 바나나 테마가 적용된 버튼을 생성합니다.
-     * - 일반 크기의 버튼에 사용됩니다.
-     * 
-     * @param text 버튼 텍스트
-     * @param x    X 좌표
-     * @param y    Y 좌표
-     * @param w    너비
-     * @param h    높이
-     * @return 생성된 JButton 객체
-     */
-    private JButton createThemedButton(String text, int x, int y, int w, int h) {
+    private JPanel createCharacterCard(String name, Image img, int x, int y, int size) {
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // 배경
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+
+                // 이미지
+                if (img != null) {
+                    g2.drawImage(img, 8, 8, size - 16, size - 16, this);
+                } else {
+                    // 랜덤 물음표
+                    g2.setColor(Color.GRAY);
+                    g2.setFont(new Font("맑은 고딕", Font.BOLD, 40));
+                    FontMetrics fm = g2.getFontMetrics();
+                    int textX = (getWidth() - fm.stringWidth("?")) / 2;
+                    g2.drawString("?", textX, 55);
+                }
+
+                // 테두리 (선택 상태에 따라 변경됨)
+                boolean isP1 = p1Character.equals(name);
+                boolean isP2 = p2Character.equals(name);
+
+                if (isP1 && isP2) {
+                    g2.setStroke(new BasicStroke(3f));
+                    g2.setColor(Color.RED);
+                    g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 12, 12);
+                    g2.setColor(Color.BLUE);
+                    g2.drawRoundRect(5, 5, getWidth() - 10, getHeight() - 10, 8, 8);
+                } else if (isP1) {
+                    g2.setStroke(new BasicStroke(3f));
+                    g2.setColor(Color.RED);
+                    g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 12, 12);
+                } else if (isP2) {
+                    g2.setStroke(new BasicStroke(3f));
+                    g2.setColor(Color.BLUE);
+                    g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 12, 12);
+                } else {
+                    g2.setStroke(new BasicStroke(1f));
+                    g2.setColor(Color.GRAY);
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
+                }
+            }
+        };
+        panel.setBounds(x, y, size, size);
+        panel.setOpaque(false);
+
+        // 클릭 리스너
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    p2Character = name;
+                } else if (SwingUtilities.isRightMouseButton(e)) {
+                    p1Character = name;
+                }
+                updateSelectionUI();
+            }
+        });
+
+        return panel;
+    }
+
+    // 현재 선택된 플레이어 정보 표시 패널 (1P / 2P)
+    private JPanel createPlayerDisplayPanel(String playerLabel, int x, int y, int width, int height) {
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // 배경 박스
+                g2.setColor(new Color(245, 245, 250));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+
+                // 테두리
+                g2.setStroke(new BasicStroke(2));
+                if (playerLabel.equals("1P"))
+                    g2.setColor(new Color(220, 80, 80));
+                else
+                    g2.setColor(new Color(80, 80, 220));
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
+
+                // 상단 플레이어 라벨
+                g2.setFont(new Font("Arial", Font.BOLD, 16));
+                if (playerLabel.equals("1P"))
+                    g2.setColor(new Color(220, 80, 80));
+                else
+                    g2.setColor(new Color(80, 80, 220));
+                int labelW = g2.getFontMetrics().stringWidth(playerLabel);
+                g2.drawString(playerLabel, (getWidth() - labelW) / 2, 22);
+
+                // 캐릭터 이미지 표시
+                String charName = playerLabel.equals("1P") ? p1Character : p2Character;
+                Image showImg = null;
+                if (charName.equals("배찌"))
+                    showImg = bazziImg;
+                else if (charName.equals("다오"))
+                    showImg = daoImg;
+
+                if (showImg != null) {
+                    int imgSize = 80;
+                    g2.drawImage(showImg, (getWidth() - imgSize) / 2, 35, imgSize, imgSize, this);
+                } else if (charName.equals("랜덤")) {
+                    g2.setColor(Color.DARK_GRAY);
+                    g2.setFont(new Font("맑은 고딕", Font.BOLD, 45));
+                    FontMetrics fm = g2.getFontMetrics();
+                    int qX = (getWidth() - fm.stringWidth("?")) / 2;
+                    g2.drawString("?", qX, 90);
+                }
+
+                // 캐릭터 이름 텍스트
+                g2.setColor(Color.BLACK);
+                g2.setFont(new Font("맑은 고딕", Font.BOLD, 14));
+                String displayName = charName;
+                int textW = g2.getFontMetrics().stringWidth(displayName);
+                g2.drawString(displayName, (getWidth() - textW) / 2, 140);
+            }
+        };
+        panel.setBounds(x, y, width, height);
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    private JButton createStyledButton(String text, int x, int y, int w, int h, Color baseColor) {
         JButton btn = new JButton(text) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // 마우스 상태에 따른 색상
                 if (getModel().isPressed())
-                    g2.setColor(ThemeColors.ACCENT);
+                    g2.setColor(baseColor.darker());
                 else if (getModel().isRollover())
-                    g2.setColor(ThemeColors.HIGHLIGHT);
+                    g2.setColor(baseColor.brighter());
                 else
-                    g2.setColor(ThemeColors.MAIN);
+                    g2.setColor(baseColor);
 
-                // 둥근 사각형 배경
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-
-                // 테두리
-                g2.setColor(ThemeColors.DARK);
+                g2.setColor(Color.DARK_GRAY);
                 g2.setStroke(new BasicStroke(2));
                 g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
 
@@ -214,171 +424,131 @@ public class LobbyPanel extends JPanel {
             }
         };
         btn.setBounds(x, y, w, h);
-        btn.setFont(new Font("맑은 고딕", Font.BOLD, 14));
-        btn.setForeground(ThemeColors.DARK);
-        btn.setFocusPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        return btn;
-    }
-
-    /**
-     * ============================================
-     * createStartButton() - 게임 시작 버튼 생성
-     * ============================================
-     * 
-     * [설명]
-     * - 게임 시작 버튼은 특별히 눈에 띄는 주황색 테마를 사용합니다.
-     * - 플레이어가 쉽게 찾을 수 있도록 강조됩니다.
-     * 
-     * @param text 버튼 텍스트
-     * @return 생성된 JButton 객체
-     */
-    private JButton createStartButton(String text) {
-        JButton btn = new JButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // 마우스 상태에 따른 주황색 계열 색상
-                if (getModel().isPressed())
-                    g2.setColor(new Color(255, 120, 0)); // 진한 주황 (클릭)
-                else if (getModel().isRollover())
-                    g2.setColor(ThemeColors.ACCENT); // 강조색 (호버)
-                else
-                    g2.setColor(new Color(255, 160, 0)); // 주황색 (일반)
-
-                // 둥근 사각형 배경 (모서리 반지름 더 크게)
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-
-                // 두꺼운 테두리
-                g2.setColor(ThemeColors.DARK);
-                g2.setStroke(new BasicStroke(3));
-                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 20, 20);
-
-                super.paintComponent(g);
-            }
-        };
+        btn.setBackground(baseColor);
         btn.setFont(new Font("맑은 고딕", Font.BOLD, 16));
-        btn.setForeground(ThemeColors.DARK);
+        btn.setForeground(Color.DARK_GRAY);
         btn.setFocusPainted(false);
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         return btn;
     }
 
-    /**
-     * ============================================
-     * createCharacterCard() - 캐릭터 카드 패널 생성
-     * ============================================
-     * 
-     * [설명]
-     * - 캐릭터 이미지와 이름을 표시하는 카드 형태의 패널을 생성합니다.
-     * - 클릭하여 캐릭터를 선택할 수 있습니다.
-     * 
-     * [이미지 경로]
-     * - 프로젝트폴더/res/캐릭터이름.png
-     * 
-     * @param name          캐릭터 이름 (예: "배찌", "다오")
-     * @param imageFileName 이미지 파일명 (예: "배찌.png")
-     * @return 생성된 캐릭터 카드 JPanel 객체
-     */
-    private JPanel createCharacterCard(String name, String imageFileName) {
-        // 익명 클래스로 JPanel 상속하여 커스텀 그리기
-        JPanel card = new JPanel() {
-            private Image charImage; // 캐릭터 이미지
-
-            // 인스턴스 초기화 블록 (생성자와 비슷한 역할)
-            {
-                // 이미지 파일 로드 (파일 시스템 경로 사용)
-                String imagePath = System.getProperty("user.dir") + File.separator + "res" + File.separator
-                        + imageFileName;
-                File imageFile = new File(imagePath);
-                if (imageFile.exists()) {
-                    charImage = new ImageIcon(imagePath).getImage();
-                    System.out.println("캐릭터 이미지 로드 성공: " + imagePath);
-                } else {
-                    System.err.println("캐릭터 이미지를 찾을 수 없습니다: " + imagePath);
-                    charImage = null;
-                }
+    private void updateSelectionUI() {
+        // 상태 라벨 업데이트
+        for (Component comp : getComponents()) {
+            if (comp instanceof JPanel) {
+                updateStatusLabelInPanel((JPanel) comp);
             }
+        }
+        repaint();
+    }
 
+    private void updateStatusLabelInPanel(JPanel panel) {
+        for (Component comp : panel.getComponents()) {
+            if (comp instanceof JLabel && "statusLabel".equals(comp.getName())) {
+                ((JLabel) comp).setText("1P: " + p1Character + " / 2P: " + p2Character);
+            } else if (comp instanceof JPanel) {
+                updateStatusLabelInPanel((JPanel) comp);
+            }
+        }
+    }
+
+    private void loadCharacterImages() {
+        try {
+            String basePath = System.getProperty("user.dir") + File.separator + "res" + File.separator;
+            File bazziFile = new File(basePath + "배찌.png");
+            if (bazziFile.exists())
+                bazziImg = ImageIO.read(bazziFile);
+            File daoFile = new File(basePath + "다오.png");
+            if (daoFile.exists())
+                daoImg = ImageIO.read(daoFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadCustomCursor() {
+        try {
+            String cursorPath = System.getProperty("user.dir") + File.separator + "res" + File.separator + "cursor.png";
+            File cursorFile = new File(cursorPath);
+            if (cursorFile.exists()) {
+                Image cursorImg = ImageIO.read(cursorFile);
+                customCursor = Toolkit.getDefaultToolkit().createCustomCursor(cursorImg, new Point(0, 0), "C");
+                setCursor(customCursor);
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    private void loadMapImages() {
+        try {
+            String basePath = System.getProperty("user.dir") + File.separator + "image" + File.separator + "InGame"
+                    + File.separator;
+            File map1File = new File(basePath + "map1.PNG");
+            if (map1File.exists())
+                map1Img = ImageIO.read(map1File);
+            File map2File = new File(basePath + "map2.bmp");
+            if (map2File.exists())
+                map2Img = ImageIO.read(map2File);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private JPanel createMapCard(String mapName, Image img, int x, int y, int width, int height) {
+        JPanel panel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // ----- 카드 배경 -----
-                g2.setColor(new Color(255, 255, 245));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+                // 배경
+                g2.setColor(Color.DARK_GRAY);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
 
-                // ----- 캐릭터 이미지 표시 -----
-                if (charImage != null) {
-                    int imgSize = 100; // 이미지 크기
-                    int x = (getWidth() - imgSize) / 2; // 중앙 정렬
-                    g2.drawImage(charImage, x, 10, imgSize, imgSize, this);
+                // 이미지
+                if (img != null) {
+                    g2.drawImage(img, 4, 4, width - 8, height - 8, this);
+                } else {
+                    g2.setColor(Color.GRAY);
+                    g2.setFont(new Font("맑은 고딕", Font.BOLD, 12));
+                    FontMetrics fm = g2.getFontMetrics();
+                    String text = mapName;
+                    int textX = (getWidth() - fm.stringWidth(text)) / 2;
+                    g2.drawString(text, textX, getHeight() / 2 + 5);
                 }
 
-                // ----- 캐릭터 이름 표시 -----
-                g2.setColor(ThemeColors.DARK);
-                g2.setFont(new Font("맑은 고딕", Font.BOLD, 16));
-                FontMetrics fm = g2.getFontMetrics();
-                int textX = (getWidth() - fm.stringWidth(name)) / 2; // 중앙 정렬
-                g2.drawString(name, textX, getHeight() - 20);
+                // 테두리 (선택 상태에 따라 변경)
+                boolean isSelected = selectedMap.equals(mapName);
+                if (isSelected) {
+                    g2.setStroke(new BasicStroke(3f));
+                    g2.setColor(new Color(255, 200, 0)); // 노란색 테두리
+                    g2.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 10, 10);
+                } else {
+                    g2.setStroke(new BasicStroke(1f));
+                    g2.setColor(Color.GRAY);
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+                }
             }
         };
-        card.setOpaque(false); // 투명 배경 (커스텀 배경 사용)
-        card.setBorder(BorderFactory.createLineBorder(ThemeColors.DARK, 2)); // 기본 테두리
-        card.setCursor(new Cursor(Cursor.HAND_CURSOR)); // 마우스 커서: 손가락 모양
-        return card;
+        panel.setBounds(x, y, width, height);
+        panel.setOpaque(false);
+
+        // 클릭 리스너
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                selectedMap = mapName;
+                repaint();
+            }
+        });
+
+        return panel;
     }
 
-    /**
-     * ============================================
-     * createPanel() - 제목이 있는 패널 생성
-     * ============================================
-     * 
-     * [설명]
-     * - 둥근 모서리와 제목이 있는 컨테이너 패널을 생성합니다.
-     * - 캐릭터 선택, 맵 정보, 채팅 영역 등에 사용됩니다.
-     * 
-     * @param title 패널 제목
-     * @param x     X 좌표
-     * @param y     Y 좌표
-     * @param w     너비
-     * @param h     높이
-     * @return 생성된 JPanel 객체
-     */
-    private JPanel createPanel(String title, int x, int y, int w, int h) {
-        JPanel p = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // 둥근 사각형 배경 (아이보리색)
-                g2.setColor(new Color(255, 255, 245));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-
-                // 테두리 (갈색)
-                g2.setColor(ThemeColors.DARK);
-                g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 20, 20);
-            }
-        };
-        p.setLayout(null); // 절대 좌표 레이아웃
-        p.setBounds(x, y, w, h); // 위치와 크기 설정
-        p.setOpaque(false); // 투명 배경
-
-        // ----- 타이틀 라벨 -----
-        JLabel l = new JLabel(title);
-        l.setBounds(10, 8, 200, 20);
-        l.setFont(new Font("맑은 고딕", Font.BOLD, 16));
-        l.setForeground(ThemeColors.DARK);
-        p.add(l);
-
-        return p;
+    // 선택된 맵 이름 반환 (게임 시작 시 사용)
+    public String getSelectedMap() {
+        return selectedMap;
     }
 }
