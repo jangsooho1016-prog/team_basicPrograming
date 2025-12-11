@@ -59,10 +59,27 @@ public class Tile {
      * @param g Graphics 객체
      */
     public void draw(Graphics g) {
-        // 아이템 이미지 가져오기 (인덱스가 0이면 null 반환)
+        // [수정] 빈 타일(0)이거나, 해당 인덱스의 이미지가 없으면 그리지 않음
+        // 기존 코드는 0번일 때도 SpriteStore.getItem(0)을 호출하여
+        // 0번 이미지(물풍선)를 바닥에 깔아버리는 문제가 있었음.
+        if (itemIndex == 0)
+            return;
+
+        // [임시] 블록(4) 이미지가 없으므로 갈색 사각형으로 대체
+        // 리소스가 없을 때도 게임 플레이가 가능하도록 시각적 피드백 제공
+        if (itemIndex == 4) {
+            int w = 40, h = 40;
+            g.setColor(new Color(180, 120, 50)); // 갈색 (나무 상자 느낌)
+            g.fillRect(centerX - w / 2, centerY - h / 2, w, h);
+            g.setColor(new Color(100, 60, 20)); // 진한 갈색 테두리
+            g.drawRect(centerX - w / 2, centerY - h / 2, w, h);
+            return; // 이미지 그리기 건너뜀
+        }
+
+        // 아이템 이미지 가져오기
         BufferedImage img = SpriteStore.getItem(itemIndex);
         if (img == null)
-            return; // 빈 타일이면 그리지 않음
+            return;
 
         int w = 40; // 타일 판정 너비
         int h = 40; // 타일 판정 높이
@@ -114,18 +131,19 @@ public class Tile {
 
     /**
      * 블록 파괴 처리
-     * 파괴 가능한 블록(4)이면 랜덤 아이템(1~3)으로 변경,
-     * 아이템(1~3)이면 빈 상태(5)로 변경합니다.
+     * 파괴 가능한 블록(4)이면 랜덤 아이템(1, 2)으로 변경,
+     * 아이템(1, 2)이면 빈 상태(5)로 변경합니다.
      */
     public void breakBlock() {
         if (this.IS_BREAKABLE) {
             Random random = new Random();
             if (itemIndex == 4) {
-                // 블록 → 랜덤 아이템 (1, 2, 3 중 하나)
-                int randomItem = random.nextInt(3) + 1;
+                // [수정] 블록 → 랜덤 아이템 (1, 2 중에서 선택)
+                // 기존 코드는 1~3이었으나, 3번은 '안 부서지는 벽'이므로 제외함.
+                int randomItem = random.nextInt(2) + 1;
                 setItemIndex(randomItem);
-            } else if (itemIndex >= 1 && itemIndex <= 3) {
-                // 아이템 → 빈 상태
+            } else if (itemIndex >= 1 && itemIndex <= 2) {
+                // 아이템(1, 2) → 빈 상태(5)
                 setItemIndex(5);
             }
         }

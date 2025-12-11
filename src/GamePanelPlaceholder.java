@@ -297,9 +297,9 @@ public class GamePanelPlaceholder extends JPanel {
         p1X = MAP_X + 40;
         p1Y = MAP_Y + 40;
 
-        // 2P: 우하단 시작
-        p2X = MAP_X + MAP_WIDTH - 60;
-        p2Y = MAP_Y + MAP_HEIGHT - 60;
+        // 2P: 우하단 시작 (벽에 끼지 않도록 조금 더 안쪽으로)
+        p2X = MAP_X + MAP_WIDTH - 80;
+        p2Y = MAP_Y + MAP_HEIGHT - 80;
     }
 
     /**
@@ -930,19 +930,38 @@ public class GamePanelPlaceholder extends JPanel {
             int imgX = (getWidth() - imgW) / 2;
             int imgY = (getHeight() - imgH) / 2;
             g2.drawImage(resultImg, imgX, imgY, this);
-        } else {
-            // 이미지 없을 때 텍스트로 표시
-            g2.setColor(Color.WHITE);
-            g2.setFont(new Font("맑은 고딕", Font.BOLD, 48));
-            String text = "무승부";
-            if (gameState == STATE_P1_WIN)
-                text = "1P 승리!";
-            else if (gameState == STATE_P2_WIN)
-                text = "2P 승리!";
+        }
 
+        // [수정] 이미지 여부와 상관없이 "누가 이겼는지" 텍스트를 항상 표시합니다.
+        // 승리한 사람 기준(1P 승리/2P 승리)으로 텍스트를 명확히 보여줍니다.
+        g2.setFont(new Font("맑은 고딕", Font.BOLD, 60)); // 글씨 크기 확대
+        String text = "";
+        Color textColor = Color.WHITE;
+
+        if (gameState == STATE_P1_WIN) {
+            text = "1P 승리!";
+            textColor = new Color(255, 100, 100); // 1P 빨강
+        } else if (gameState == STATE_P2_WIN) {
+            text = "2P 승리!";
+            textColor = new Color(100, 100, 255); // 2P 파랑
+        } else if (gameState == STATE_DRAW) {
+            text = "무승부";
+            textColor = Color.LIGHT_GRAY;
+        }
+
+        // 텍스트 그리기 (그림자 효과 추가)
+        if (!text.isEmpty()) {
             FontMetrics fm = g2.getFontMetrics();
             int textX = (getWidth() - fm.stringWidth(text)) / 2;
-            int textY = getHeight() / 2;
+            // 이미지가 있다면 이미지 아래쪽에, 없다면 중앙에 표시
+            int textY = (resultImg != null) ? (getHeight() / 2 + 150) : (getHeight() / 2);
+
+            // 그림자 (검은색)
+            g2.setColor(Color.BLACK);
+            g2.drawString(text, textX + 3, textY + 3);
+
+            // 본문 (승자 색상)
+            g2.setColor(textColor);
             g2.drawString(text, textX, textY);
         }
     }

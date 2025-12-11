@@ -1,283 +1,133 @@
-# 🎮 Water Bomb Man - 프로젝트 설명서
+# 누구나 이해할 수 있는 자바 게임 프로젝트 설명서 :video_game:
 
-## 1. 프로젝트 개요
-
-**Water Bomb Man**은 Java Swing을 활용한 크레이지 아케이드 스타일의 게임 UI 프로토타입입니다.
-
-### 개발 환경
-- **언어**: Java (JDK 24)
-- **GUI 프레임워크**: Java Swing
-- **사용 라이브러리**: Java 표준 라이브러리만 사용 (외부 라이브러리 없음)
+이 문서는 프로그래밍을 잘 모르는 사람도 **"이 게임이 어떻게 돌아가는지"** 쉽게 이해할 수 있도록 작성되었습니다. 발표나 팀 프로젝트 설명 때 참고하세요!
 
 ---
 
-## 2. 파일 구조
+## 1. 게임 화면은 어떻게 바뀔까? (화면 전환의 비밀) :framed_picture:
 
-```
-team_basicPrograming/
-├── src/                          # 소스 코드
-│   ├── CrazyArcade_UI.java       # 메인 프레임 (진입점)
-│   ├── MenuPanel.java            # 메인 메뉴 화면
-│   ├── LobbyPanel.java           # 로비 화면 (캐릭터/맵 선택)
-│   ├── GamePanelPlaceholder.java # 게임 화면
-│   ├── GuidePanel.java           # 가이드 화면 (조작법)
-│   ├── SettingsPanel.java        # 설정 화면
-│   ├── CreditsPanel.java         # 크레딧 화면
-│   ├── ThemeColors.java          # 테마 색상 정의
-│   ├── BGMPlayer.java            # BGM 재생
-│   └── GameSettings.java         # 설정 저장/로드
-├── image/                        # 이미지 리소스
-├── res/                          # 캐릭터, GIF 등
-└── sound/                        # 배경음악
-```
+게임을 하면 **메뉴 화면 -> 대기실 -> 게임 화면**으로 화면이 척척 바뀌죠? 이 원리는 아주 간단합니다.
 
----
-
-## 3. 화면 흐름 (CardLayout)
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  MenuPanel  │───▶│ LobbyPanel  │───▶│ GamePanel   │
-│  (메인 메뉴) │    │  (로비)     │    │  (게임)     │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                                     │
-       ├──────────▶ GuidePanel (가이드)      │
-       │                                     │
-       ├──────────▶ SettingsPanel (설정)     │
-       │                                     │
-       └──────────▶ CreditsPanel (크레딧)    │
-                                             │
-                   ESC 또는 나가기 버튼 ◀────┘
-```
-
-**CardLayout 사용**: `CrazyArcade_UI.java`에서 CardLayout을 사용하여 화면 전환을 관리합니다.
-
----
-
-## 4. 핵심 파일 설명
-
-### 4.1 CrazyArcade_UI.java (메인 프레임)
-
-**역할**: 프로그램의 진입점이자 모든 화면을 관리하는 컨테이너
+### :bulb: 카드 더미 원리 (CardLayout)
+여러 장의 카드를 겹쳐 놓고 **맨 위의 카드만 보여주는 것**과 같습니다.
 
 ```java
-// 화면 전환을 위한 상수 정의
-public static final String PANEL_MENU = "MENU";
-public static final String PANEL_LOBBY = "LOBBY";
-public static final String PANEL_GAME = "GAME";
-// ...
+// "자, 이제 게임 화면(PANEL_GAME) 카드를 맨 앞으로 꺼내!"
+cardLayout.show(mainContainer, "PANEL_GAME");
+```
 
-// CardLayout으로 화면 전환
-public void showPanel(String panelName) {
-    cardLayout.show(mainContainer, panelName);
+- **`CrazyArcade_UI`** 라는 친구가 이 카드 더미를 관리합니다.
+- 우리가 "게임 시작!" 버튼을 누르면, 위 코드가 실행되면서 순서를 싹 바꿔주는 거예요.
+
+---
+
+## 2. 캐릭터는 어떻게 움직일까? (좌표의 마법) :woman_running: :man_running:
+
+화면 속 캐릭터는 어떻게 내 키보드 입력에 맞춰 움직이는 걸까요?
+
+### :bulb: X, Y 좌표 놀이
+학교 수학 시간에 배운 **그래프(X축, Y축)**를 생각하면 됩니다.
+- 화면 왼쪽 맨 위가 **(0, 0)** 입니다.
+- 오른쪽으로 가려면 **X값을 더하고(+5)**, 아래로 가려면 **Y값을 더합니다(+5)**.
+
+```java
+// 오른쪽 화살표 키를 누르면?
+if (키보드_오른쪽_눌림) {
+    p1X = p1X + 5; // X 좌표를 5만큼 늘려라! (오른쪽 이동)
 }
 ```
 
-**작동 원리**:
-1. `JFrame`을 생성하고 크기를 800x600으로 설정
-2. `CardLayout`을 사용하여 여러 패널을 하나의 컨테이너에 추가
-3. `showPanel()` 메서드로 화면 전환
+- 컴퓨터는 위 코드를 보고 캐릭터의 위치를 오른쪽으로 슥 옮겨줍니다.
 
 ---
 
-### 4.2 LobbyPanel.java (로비 화면)
+## 3. 게임은 어떻게 끊김 없이 움직일까? (게임 루프) :movie_camera:
 
-**역할**: 캐릭터와 맵을 선택하는 대기실 화면
+게임은 멈춰있는 그림이 아니라 계속 움직이는 영상 같죠? 사실은 엄청 빠르게 그림을 바꿔치기 하고 있는 겁니다!
 
-#### 레이아웃 구조
-```
-┌──────────────────┬────────────────────┐
-│  1P 캐릭터 정보   │    캐릭터 선택     │
-│  [이미지][능력치] │  [배찌][다오][랜덤] │
-├──────────────────┼────────────────────┤
-│  2P 캐릭터 정보   │      맵 선택       │
-│  [이미지][능력치] │  [맵1] [맵2]       │
-├──────────────────┤  [게임 시작]       │
-│     채팅창       │  [메인으로]        │
-│                  │                    │
-└──────────────────┴────────────────────┘
-```
+### :bulb: 플립북 애니메이션 원리
+책 귀퉁이에 그림을 그리고 빠르게 넘기면 움직이는 것처럼 보이는 것 있죠? 그걸 컴퓨터가 대신 해줍니다.
 
-#### 캐릭터 선택 로직
 ```java
-// 마우스 클릭 이벤트로 캐릭터 선택
-addMouseListener(new MouseAdapter() {
-    public void mousePressed(MouseEvent e) {
-        if (SwingUtilities.isRightMouseButton(e)) {
-            // 우클릭 → 1P 캐릭터 선택
-            selected1P = characterName;
-        } else {
-            // 좌클릭 → 2P 캐릭터 선택
-            selected2P = characterName;
-        }
-        updateSelectionUI();  // UI 갱신
-    }
+// 0.016초(16ms)마다 이 일을 계속 반복해!
+gameTimer = new Timer(16, e -> {
+    updateGame(); // 1. 위치 계산하기 (이동, 물풍선 등)
+    repaint();    // 2. 화면 다시 그리기 (새 위치에 캐릭터 그리기)
 });
 ```
 
-#### 능력치 게이지 그리기
+- 이 **게임 루프(Game Loop)**가 **1초에 60번**이나 반복됩니다.
+- 눈 깜짝할 사이에 화면을 지우고 다시 그리니까, 우리 눈에는 **부드럽게 움직이는 영상**처럼 보이는 거예요.
+
+---
+
+## 4. 벽은 어떻게 뚫지 못하게 할까? (충돌 감지) :construction:
+
+캐릭터가 나무나 벽을 뚫고 지나가면 안 되겠죠? 이걸 막는 방법은 **"미리 확인하기"** 입니다.
+
+### :bulb: 더듬이 원리
+캐릭터가 앞으로 한 발자국 가기 **직전**에, 컴퓨터가 미리 검사를 합니다.
+
 ```java
-private void drawStatBar(Graphics2D g2, String label, int x, int y, 
-                         int width, int height, int value, Color color) {
-    // 1. 라벨 텍스트 그리기
-    g2.drawString(label, x, y);
-    
-    // 2. 8칸의 게이지 셀 그리기
-    for (int i = 0; i < 8; i++) {
-        if (i < value) {
-            g2.setColor(color);      // 채워진 칸
-        } else {
-            g2.setColor(Color.GRAY); // 빈 칸
-        }
-        g2.fillRect(cellX, y, cellWidth, height);
-    }
+// "잠깐! 네가 가려는 그 위치(x, y)에 벽돌(itemIndex 3)이 있니?"
+if (tiles[y][x] == 벽돌) {
+    return true; // "응, 있어! (충돌)"
+}
+return false; // "아니, 없어! (이동 가능)"
+```
+
+- 만약 **"응, 있어!"(true)** 라고 하면 -> 움직이지 못하게 막습니다.
+- 만약 **"아니, 없어!"(false)** 라고 하면 -> 이동을 허락합니다. :ok_hand:
+
+---
+
+## 5. 물풍선은 어떻게 터질까? (타이머) :timer_clock:
+
+물풍선을 놓고 3초 뒤에 **펑!** 터지는 건 어떻게 할까요?
+
+### :bulb: 라면 타이머 원리
+
+```java
+// 1. 물풍선 놓을 때 시간 기록
+long 설치시간 = System.currentTimeMillis(); // 현재 시간 저장 (예: 12시 0분 0초)
+
+// ... (게임 루프가 계속 시계를 쳐다봄) ...
+
+// 2. 지금 시간이 설치 시간보다 3초(3000ms) 지났니?
+if (현재시간 - 설치시간 >= 3000) {
+    explodeBomb(); // "폭발해!" 명령
 }
 ```
 
----
-
-### 4.3 GamePanelPlaceholder.java (게임 화면)
-
-**역할**: 실제 게임이 진행되는 화면
-
-#### 레이아웃 구조
-```
-┌─────────────────────┬───────────┐
-│                     │ 1P 캐릭터 │
-│                     ├───────────┤
-│                     │ 1P 아이템 │
-│   맵 + 게임 화면    ├───────────┤
-│    (570x570)        │ 2P 캐릭터 │
-│                     ├───────────┤
-│                     │ 2P 아이템 │
-│                     ├───────────┤
-│                     │  나가기   │
-└─────────────────────┴───────────┘
-```
-
-#### ESC 키로 나가기
-```java
-addKeyListener(new KeyAdapter() {
-    public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-            mainFrame.showPanel(CrazyArcade_UI.PANEL_LOBBY);
-        }
-    }
-});
-```
+1.  물풍선을 놓는 순간, 컴퓨터는 **"지금 시간"**을 기록해 둡니다.
+2.  부지런한 게임 루프가 계속 시계를 보다가, 3초가 지나는 순간 **"폭발해!"** 라고 명령을 내립니다.
 
 ---
 
-### 4.4 GuidePanel.java (가이드 화면)
+## 6. 배경 음악은 어떻게 나올까? (싱글톤 패턴) :musical_note:
 
-**역할**: 게임 조작법을 GIF 애니메이션과 함께 안내
+배경 음악(BGM)은 게임 어디서든 흘러나와야 하고, 겹치면 안 됩니다.
 
-#### GIF 애니메이션 표시
-```java
-// ImageIcon으로 GIF 자동 재생
-String gifPath = "res/상하.gif";
-ImageIcon gifIcon = new ImageIcon(gifPath);
-JLabel gifLabel = new JLabel(gifIcon);  // GIF 자동 재생됨!
-```
-
-#### 스크롤 패널
-```java
-JScrollPane scrollPane = new JScrollPane(contentPanel);
-scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-scrollPane.getVerticalScrollBar().setUnitIncrement(25);  // 스크롤 속도
-```
-
----
-
-### 4.5 BGMPlayer.java (배경음악)
-
-**역할**: WAV 파일로 배경음악 재생
+### :bulb: 학교 방송실 DJ 원리
+학교에 방송실 DJ는 **단 한 명**이죠? 만약 DJ가 여러 명이면 음악이 섞여서 시끄러울 거예요.
 
 ```java
-// WAV 파일 재생
-AudioInputStream audioStream = AudioSystem.getAudioInputStream(audioFile);
-Clip clip = AudioSystem.getClip();
-clip.open(audioStream);
-clip.loop(Clip.LOOP_CONTINUOUSLY);  // 무한 반복
-clip.start();
+// "DJ(BGMPlayer)야, 지금 나오는 노래 끄고 로비 노래 틀어줘!"
+BGMPlayer.getInstance().play("LobbyMusic.wav");
 ```
 
----
-
-### 4.6 GameSettings.java (설정 저장)
-
-**역할**: 볼륨, 키 설정 등을 파일로 저장/로드
-
-```java
-// Properties로 설정 저장
-Properties props = new Properties();
-props.setProperty("bgmVolume", String.valueOf(bgmVolume));
-props.store(new FileOutputStream("settings.properties"), "Game Settings");
-
-// 설정 로드
-props.load(new FileInputStream("settings.properties"));
-bgmVolume = Integer.parseInt(props.getProperty("bgmVolume", "50"));
-```
+- **`getInstance()`** 라는 주문은 **"오직 한 명뿐인 그 DJ 데려와"** 라는 뜻입니다.
+- DJ가 한 명이라서 노래가 절대 겹치거나 꼬이지 않아요.
 
 ---
 
-## 5. 수업 내용 적용 부분
+## 요약 :memo:
 
-| 수업 주제 | 적용 위치 | 설명 |
-|-----------|-----------|------|
-| **JFrame/JPanel** | 모든 파일 | 기본 GUI 구조 |
-| **CardLayout** | CrazyArcade_UI.java | 화면 전환 |
-| **이벤트 처리** | LobbyPanel.java, GamePanelPlaceholder.java | 마우스/키보드 입력 |
-| **더블 버퍼링** | 모든 Panel | paintComponent 오버라이드 |
-| **사운드 재생** | BGMPlayer.java | AudioClip 사용 |
-| **파일 저장** | GameSettings.java | Properties 사용 |
-| **이미지 로드** | LobbyPanel.java, GamePanelPlaceholder.java | ImageIO 사용 |
+1.  **화면 전환 `cardLayout.show()`**: 카드 뭉치 맨 앞장을 바꿔치기 한다.
+2.  **이동 `x + 5`**: 좌표 숫자를 더하고 뺀다.
+3.  **움직임 `Timer`**: 1초에 60번씩 계산하고 다시 그린다. (플립북)
+4.  **벽 충돌 `if (벽이있니?)`**: 가기 전에 미리 확인해보고 막는다.
+5.  **물풍선 `코드`**: 설치 시간을 적어두고 3초 뒤에 터뜨린다.
+6.  **음악 `getInstance()`**: 전담 DJ(싱글톤) 한 명이 관리한다.
 
----
-
-## 6. 조작법
-
-### 메인 메뉴
-- **마우스 클릭**: 버튼 선택
-
-### 로비
-- **우클릭**: 1P 캐릭터 선택
-- **좌클릭**: 2P 캐릭터 선택
-
-### 게임 (예정)
-- **1P 이동**: W, A, S, D
-- **2P 이동**: ↑, ←, ↓, →
-- **1P 폭탄**: Shift
-- **2P 폭탄**: NumPad 1
-- **1P 아이템**: Ctrl
-- **2P 아이템**: NumPad 0
-- **ESC**: 로비로 돌아가기
-
----
-
-## 7. 팀원 역할
-
-| 담당 | 역할 |
-|------|------|
-| UI 담당 | 화면 디자인 및 구현 |
-| 캐릭터 담당 | 캐릭터 로직 |
-| 맵 담당 | 맵 구현 |
-| 아이템 담당 | 아이템 시스템 |
-
----
-
-## 8. 실행 방법
-
-```bash
-# 컴파일
-javac -d out src/*.java
-
-# 실행
-java -cp out CrazyArcade_UI
-```
-
-또는 IDE에서 `CrazyArcade_UI.java`의 `main` 메서드를 실행하세요.
-
----
-
-*작성일: 2024-12-11*
+이 설명으로 친구들에게 우리 프로젝트를(코드까지 보여주면서) 자신 있게 설명해 보세요! 파이팅! :fire:
