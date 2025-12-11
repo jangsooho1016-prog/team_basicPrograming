@@ -35,7 +35,7 @@ public class Tile {
         int imgW = SpriteStore.getItemWidth();   // 40
         int imgH = SpriteStore.getItemHeight();  // 47
     
-        int offsetY = imgH - h;  // 7
+        int offsetY = imgH - h -6;  // 7
     
         // 판정 기준은 centerX, centerY 의 40x40, 이미지는 위로 7px 올려서 그리기
         int drawX = centerX - imgW / 2;
@@ -65,11 +65,11 @@ public class Tile {
     public void breakBlock() {
         if (this.IS_BREAKABLE) {
             Random random = new Random();
-            int possibility = random.nextInt(1);
-            if (possibility > 0.3) {
-                setItemIndex(random.nextInt(2));
+            if (itemIndex == 4) {
+                int randomItem = random.nextInt(3) + 1;  // 1, 2, 3 중 랜덤
+                setItemIndex(randomItem);
             }
-            else {
+            else if (itemIndex >= 1 && itemIndex <= 3) {
                 setItemIndex(5);
             }
         }

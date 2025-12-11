@@ -191,7 +191,6 @@ public class Screen extends Canvas implements KeyListener {
         }
         repaint();
     }
-
     @Override
     public void keyReleased(KeyEvent e) {}
 }
