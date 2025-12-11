@@ -267,7 +267,7 @@ public class LobbyPanel extends JPanel {
         startBtn.addActionListener(e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_GAME));
         rightBottomBox.add(startBtn);
 
-        // 뒤로 가기 버튼
+        // 메인으로 버튼
         JButton backBtn = createStyledButton("메인으로", 75, 182, 200, 38, new Color(200, 200, 200));
         backBtn.addActionListener(e -> mainFrame.showPanel(CrazyArcade_UI.PANEL_MENU));
         rightBottomBox.add(backBtn);
