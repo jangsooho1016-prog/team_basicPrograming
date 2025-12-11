@@ -19,14 +19,14 @@ public class Screen extends Canvas implements KeyListener {
     private int selectedCol = 0;
     private int rows = 13;
     private int cols = 15;
-    private int gap = 50;
+    private int gap = 25;
     // 🔴 더블 버퍼용
     private BufferedImage backBuffer;
     // making mode, load mod
     private Boolean ISLOADMAP = true;
 
     public Screen() {
-        setPreferredSize(new Dimension(611, 600));
+        setPreferredSize(new Dimension(600, 600));
 
         map = new Map("res/forest24.png");
         SpriteStore.init();
@@ -69,7 +69,7 @@ public class Screen extends Canvas implements KeyListener {
         
                     int value = data[r][c];
         
-                    Tile t = new Tile(cx + 5, cy - 2,0, false);
+                    Tile t = new Tile(cx, cy ,0, false);
 
                     t.setItemIndex(value); // 0,1,2,... 아이템 인덱스
                     tiles[r][c] = t;
@@ -172,7 +172,7 @@ public class Screen extends Canvas implements KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         int code = e.getKeyCode();
-
+        
         // 예: 방향키로 선택 타일 이동
         if (code == KeyEvent.VK_RIGHT) selectedCol = Math.min(selectedCol + 1, cols - 1);
         if (code == KeyEvent.VK_LEFT)  selectedCol = Math.max(selectedCol - 1, 0);

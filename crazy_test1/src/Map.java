@@ -6,12 +6,12 @@ import javax.imageio.ImageIO;
 
 public class Map {
     private BufferedImage mapImage;
-    private int gap = 50;
+    private int gap = 25;
     
     
     public Map(String imagePath) {
         try {
-            mapImage = ImageIO.read(new File("res/forest24.png"));         
+            mapImage = ImageIO.read(new File("res/map2.png"));         
         } 
         catch (IOException e) {
             System.err.println("이미지 로드 실패");

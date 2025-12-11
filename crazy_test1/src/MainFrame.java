@@ -2,8 +2,8 @@ import javax.swing.JFrame;
 
 public class MainFrame extends JFrame {
 
-    private int width = 1024;
-    private int height = 768;
+    private int width = 800;
+    private int height = 600;
     public MainFrame() {
         setTitle("Map Demo");
         setSize(width,height);

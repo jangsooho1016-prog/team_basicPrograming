@@ -3,6 +3,7 @@ import java.awt.Graphics2D;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.image.BufferedImage;
+import java.util.Random;
 public class Tile {
 
     private int centerX;
@@ -10,7 +11,7 @@ public class Tile {
     private int itemIndex;
     private Boolean IS_BREAKABLE;
     // 디버그용
-    private static final boolean DEBUG_MODE = true;
+    private boolean DEBUG_MODE = true;
 
     public Tile(int centerX, int centerY, int itemIndex, Boolean IS_BREAKABLE) {
             this.centerX = centerX;
@@ -24,13 +25,23 @@ public class Tile {
     }
 
     public void draw(Graphics g) {
-        BufferedImage img = SpriteStore.getItem(itemIndex); 
+        BufferedImage img = SpriteStore.getItem(itemIndex);
         if (img == null) return;
-
-        int w = SpriteStore.getItemWidth();
-        int h = SpriteStore.getItemHeight();
-
-        g.drawImage(img, centerX - w / 2, centerY - h / 2, null);
+    
+        int w = 40;   // 실제 판정 너비
+        int h = 40;   // 실제 판정 높이
+    
+        // 이미지 실제 크기 (40x47)
+        int imgW = SpriteStore.getItemWidth();   // 40
+        int imgH = SpriteStore.getItemHeight();  // 47
+    
+        int offsetY = imgH - h;  // 7
+    
+        // 판정 기준은 centerX, centerY 의 40x40, 이미지는 위로 7px 올려서 그리기
+        int drawX = centerX - imgW / 2;
+        int drawY = centerY - imgH / 2 - offsetY;
+    
+        g.drawImage(img, drawX, drawY, null);
 
         if (DEBUG_MODE && g instanceof Graphics2D) {
             Graphics2D g2d = (Graphics2D) g;
@@ -50,4 +61,17 @@ public class Tile {
         }
     }
     public int getItemIndex() { return itemIndex; }
+
+    public void breakBlock() {
+        if (this.IS_BREAKABLE) {
+            Random random = new Random();
+            int possibility = random.nextInt(1);
+            if (possibility > 0.3) {
+                setItemIndex(random.nextInt(2));
+            }
+            else {
+                setItemIndex(5);
+            }
+        }
+    }
 }
