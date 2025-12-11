@@ -92,11 +92,31 @@ public class MenuPanel extends JPanel {
 
         // 그래픽 품질 향상을 위한 안티앨리어싱 설정
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         if (backgroundImage != null)
             g2.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
         else
             g2.fillRect(0, 0, getWidth(), getHeight()); // 이미지가 없으면 기본 배경색 사용
+
+        // 타이틀 텍스트 그리기 "Water Bomb Man"
+        String title = "Water Bomb Man";
+        g2.setFont(new Font("맑은 고딕", Font.BOLD, 50));
+        FontMetrics fm = g2.getFontMetrics();
+        int titleX = (getWidth() - fm.stringWidth(title)) / 2;
+        int titleY = 75;
+
+        // 텍스트 그림자 (부드러운 효과)
+        g2.setColor(new Color(0, 0, 0, 150));
+        g2.drawString(title, titleX + 4, titleY + 4);
+
+        // 메인 텍스트 (밝은 하늘색/파란색 - 크레이지 아케이드 스타일)
+        g2.setColor(new Color(100, 200, 255));
+        g2.drawString(title, titleX, titleY);
+
+        // 텍스트 하이라이트 (살짝 밝은 효과)
+        g2.setColor(new Color(180, 230, 255, 180));
+        g2.drawString(title, titleX - 1, titleY - 1);
     }
 
     /**
