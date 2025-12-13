@@ -21,7 +21,7 @@ import java.io.IOException;
 public class LobbyPanel extends JPanel {
     private CrazyArcade_UI mainFrame;
     private String p1Character = "배찌"; // 기본값
-    private String p2Character = "다오"; // 기본값
+    private String p2Character = "디지니"; // 기본값
     private Cursor customCursor;
 
     // 캐릭터 이미지
@@ -176,7 +176,7 @@ public class LobbyPanel extends JPanel {
         cardBazzi = createCharacterCard("배찌", bazziImg, startX, cardY, cardSize);
         rightTopBox.add(cardBazzi);
 
-        cardDao = createCharacterCard("다오", daoImg, startX + cardSize + gap, cardY, cardSize);
+        cardDao = createCharacterCard("디지니", daoImg, startX + cardSize + gap, cardY, cardSize);
         rightTopBox.add(cardDao);
 
         cardRandom = createCharacterCard("랜덤", null, startX + (cardSize + gap) * 2, cardY, cardSize);
@@ -189,7 +189,7 @@ public class LobbyPanel extends JPanel {
         bazziLabel.setBounds(startX, cardY + cardSize + 5, cardSize, 20);
         rightTopBox.add(bazziLabel);
 
-        JLabel daoLabel = new JLabel("다오", SwingConstants.CENTER);
+        JLabel daoLabel = new JLabel("디지니", SwingConstants.CENTER);
         daoLabel.setFont(new Font("맑은 고딕", Font.BOLD, 12));
         daoLabel.setForeground(Color.WHITE);
         daoLabel.setBounds(startX + cardSize + gap, cardY + cardSize + 5, cardSize, 20);
@@ -398,7 +398,7 @@ public class LobbyPanel extends JPanel {
                 Image showImg = null;
                 if (charName.equals("배찌"))
                     showImg = bazziImg;
-                else if (charName.equals("다오"))
+                else if (charName.equals("디지니"))
                     showImg = daoImg;
 
                 if (showImg != null) {
@@ -421,9 +421,9 @@ public class LobbyPanel extends JPanel {
                 if (charName.equals("배찌")) {
                     g2.drawString("강점: Speed", 65, 52);
                     g2.drawString("빠른 속도의 캐릭터", 65, 63);
-                } else if (charName.equals("다오")) {
-                    g2.drawString("강점: Normal", 65, 52);
-                    g2.drawString("균형잡힌 캐릭터", 65, 63);
+                } else if (charName.equals("디지니")) {
+                    g2.drawString("강점: 2개의 물풍선", 65, 52);
+                    g2.drawString("초반이 강한 캐릭터", 65, 63);
                 } else {
                     g2.drawString("랜덤 선택", 65, 52);
                 }
@@ -437,54 +437,54 @@ public class LobbyPanel extends JPanel {
 
                 // 능력치 값 (캐릭터별)
                 int bombCount, waterLength, speed;
+
                 if (charName.equals("배찌")) {
-                    bombCount = 4;
-                    waterLength = 5;
-                    speed = 7; // 배찌: 속도 특화
-                } else if (charName.equals("다오")) {
+                    bombCount = 1;  // 물풍선 개수
+                    waterLength = 1; // 물줄기 길이
+                    speed = 4;       // 속도
+                } else if (charName.equals("디지니")) {
+                    bombCount = 2;  // 물풍선 개수
+                    waterLength = 1; // 물줄기 길이
+                    speed = 4;       // 속도
+                } else { // 랜덤
                     bombCount = 5;
                     waterLength = 5;
-                    speed = 5; // 다오: 균형형
-                } else {
-                    bombCount = 5;
-                    waterLength = 5;
-                    speed = 5; // 랜덤: 기본
+                    speed = 5;
                 }
 
-                // 개 수 (폭탄 개수)
-                drawStatBar(g2, "개 수", gaugeX, gaugeY, gaugeWidth, gaugeHeight, bombCount, new Color(255, 180, 50));
-                // 물줄기
-                drawStatBar(g2, "물줄기", gaugeX, gaugeY + gaugeHeight + gap, gaugeWidth, gaugeHeight, waterLength,
-                        new Color(100, 200, 100));
-                // 속 도
-                drawStatBar(g2, "속 도", gaugeX, gaugeY + (gaugeHeight + gap) * 2, gaugeWidth, gaugeHeight, speed,
-                        new Color(100, 150, 255));
-            }
+                // 스탯 바 그리기 (최대값 10 기준)
+                drawStatBar(g2, "개수", gaugeX, gaugeY, gaugeWidth, gaugeHeight, bombCount, new Color(255, 180, 50));
+                drawStatBar(g2, "물줄기", gaugeX, gaugeY + (gaugeHeight + gap), gaugeWidth, gaugeHeight, waterLength, new Color(100, 200, 100));
+                drawStatBar(g2, "속도", gaugeX, gaugeY + (gaugeHeight + gap) * 2, gaugeWidth, gaugeHeight, speed, new Color(100, 150, 255));
+                }
 
             // 능력치 바 그리기 헬퍼 메서드
-            private void drawStatBar(Graphics2D g2, String label, int x, int y, int width, int height, int value,
-                    Color color) {
-                // 라벨
+            private void drawStatBar(Graphics2D g2, String label, int x, int y, int width, int height, int value, Color color) {
+                // 레이블 그리기
                 g2.setColor(Color.DARK_GRAY);
                 g2.setFont(new Font("맑은 고딕", Font.BOLD, 10));
                 g2.drawString(label, x, y + height - 2);
-
-                // 게이지 바 시작 위치 (라벨 뒤)
-                int barX = x + 40;
+            
+                // 바 영역
+                int barX = x + 30;
                 int barWidth = width;
-                int cellWidth = barWidth / 8;
-                int maxCells = 8;
-
-                // 각 셀 그리기
+                int cellWidth = barWidth / 10; // 10칸으로 나눔
+                int maxCells = 10; // 최대 10칸
+            
                 for (int i = 0; i < maxCells; i++) {
                     int cellX = barX + i * (cellWidth + 2);
+            
                     if (i < value) {
+                        // 채워진 칸
                         g2.setColor(color);
                         g2.fillRect(cellX, y, cellWidth, height);
                     } else {
+                        // 빈 칸
                         g2.setColor(new Color(220, 220, 220));
                         g2.fillRect(cellX, y, cellWidth, height);
                     }
+            
+                    // 테두리
                     g2.setColor(new Color(180, 180, 180));
                     g2.drawRect(cellX, y, cellWidth, height);
                 }
@@ -553,7 +553,7 @@ public class LobbyPanel extends JPanel {
             File bazziFile = new File(basePath + "배찌.png");
             if (bazziFile.exists())
                 bazziImg = ImageIO.read(bazziFile);
-            File daoFile = new File(basePath + "다오.png");
+            File daoFile = new File(basePath + "디지니.png");
             if (daoFile.exists())
                 daoImg = ImageIO.read(daoFile);
         } catch (IOException e) {
@@ -663,7 +663,7 @@ public class LobbyPanel extends JPanel {
      */
     public String getP1Character() {
         if ("랜덤".equals(p1Character)) {
-            return Math.random() < 0.5 ? "배찌" : "다오";
+            return Math.random() < 0.5 ? "배찌" : "디지니";
         }
         return p1Character;
     }
@@ -673,7 +673,7 @@ public class LobbyPanel extends JPanel {
      */
     public String getP2Character() {
         if ("랜덤".equals(p2Character)) {
-            return Math.random() < 0.5 ? "배찌" : "다오";
+            return Math.random() < 0.5 ? "배찌" : "디지니";
         }
         return p2Character;
     }

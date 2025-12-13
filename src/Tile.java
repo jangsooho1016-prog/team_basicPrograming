@@ -59,24 +59,6 @@ public class Tile {
      * @param g Graphics 객체
      */
     public void draw(Graphics g) {
-        // [수정] 빈 타일(0)이거나, 해당 인덱스의 이미지가 없으면 그리지 않음
-        // 기존 코드는 0번일 때도 SpriteStore.getItem(0)을 호출하여
-        // 0번 이미지(물풍선)를 바닥에 깔아버리는 문제가 있었음.
-        if (itemIndex == 0)
-            return;
-
-        // [임시] 블록(4) 이미지가 없으므로 갈색 사각형으로 대체
-        // 리소스가 없을 때도 게임 플레이가 가능하도록 시각적 피드백 제공
-        if (itemIndex == 4) {
-            int w = 40, h = 40;
-            g.setColor(new Color(180, 120, 50)); // 갈색 (나무 상자 느낌)
-            g.fillRect(centerX - w / 2, centerY - h / 2, w, h);
-            g.setColor(new Color(100, 60, 20)); // 진한 갈색 테두리
-            g.drawRect(centerX - w / 2, centerY - h / 2, w, h);
-            return; // 이미지 그리기 건너뜀
-        }
-
-        // 아이템 이미지 가져오기
         BufferedImage img = SpriteStore.getItem(itemIndex);
         if (img == null)
             return;

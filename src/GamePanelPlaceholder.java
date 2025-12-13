@@ -29,6 +29,7 @@ import java.io.FileReader;
  * 2. 충돌 감지 (캐릭터가 블록이나 맵 밖으로 나가지 못하게 함)
  * 3. 물풍선 로직 (설치 -> 3초 후 폭발 -> 블록 파괴 및 게임 결과 판정)
  * 4. 스프라이트 애니메이션 (8x4 그리드, 방향별 애니메이션)
+ * 5. 캐릭터별 스탯 시스템 (물풍선 개수, 물줄기 범위, 속도)
  * --------------------------------------------------------
  */
 public class GamePanelPlaceholder extends JPanel {
@@ -43,40 +44,65 @@ public class GamePanelPlaceholder extends JPanel {
     private static final int TILE_COLS = 15;
 
     // ========== [3] 캐릭터 시스템 (스프라이트 애니메이션) ==========
-    private BufferedImage[][] p1Sprites; // 1P 스프라이트 시트 [행][열]
-    private BufferedImage[][] p2Sprites; // 2P 스프라이트 시트 [행][열]
+    private BufferedImage[][] p1Sprites;
+    private BufferedImage[][] p2Sprites;
     private static final int SPRITE_ROWS = 4;
     private static final int SPRITE_COLS = 8;
     
-    // 스프라이트 애니메이션 상태
-    private int p1SpriteRow = 3; // 1P 현재 행 (방향)
-    private int p1SpriteCol = 0; // 1P 현재 열 (애니메이션 프레임)
-    private int p2SpriteRow = 3; // 2P 현재 행
-    private int p2SpriteCol = 0; // 2P 현재 열
+    // 스프라이트 크기
+    private static final int SPRITE_WIDTH = 44;
+    private static final int SPRITE_HEIGHT = 62;
     
-    private int animationSpeed = 3; // 애니메이션 속도 (값이 클수록 느림)
+    // 스프라이트 애니메이션 상태
+    private int p1SpriteRow = 3;
+    private int p1SpriteCol = 0;
+    private int p2SpriteRow = 3;
+    private int p2SpriteCol = 0;
+    
+    private int animationSpeed = 3;
     private int p1FrameCounter = 0;
     private int p2FrameCounter = 0;
     
     // 현재 플레이어의 선택된 캐릭터 이름
     private String p1CharacterName = "배찌";
-    private String p2CharacterName = "다오";
+    private String p2CharacterName = "디지니"; // 다오 -> 디지니로 변경
 
-    // ========== [4] 좌표 및 이동 시스템 (수정) ==========
+    // ========== [3-2] 캐릭터 스탯 시스템 ==========
+    // 플레이어 1 스탯
+    private int p1BombCount = 1;      // 물풍선 설치 개수
+    private int p1BombRange = 1;      // 물줄기 길이
+    private int p1Speed = 4;          // 속도
+
+    // 플레이어 2 스탯
+    private int p2BombCount = 1;
+    private int p2BombRange = 1;
+    private int p2Speed = 4;
+
+    // 캐릭터별 최대 스탯
+    private int p1MaxBombCount = 6;
+    private int p1MaxBombRange = 7;
+    private int p1MaxSpeed = 9;
+
+    private int p2MaxBombCount = 7;
+    private int p2MaxBombRange = 9;
+    private int p2MaxSpeed = 8;
+
+    // 현재 설치된 물풍선 개수 추적
+    private int p1CurrentBombs = 0;
+    private int p2CurrentBombs = 0;
+
+    // ========== [4] 좌표 및 이동 시스템 ==========
     private int p1X = 60;
     private int p1Y = 60;
     private int p2X = 520;
     private int p2Y = 520;
-
-    private static final int PLAYER_SIZE = 40;
-    private static final int SPRITE_WIDTH = 44;
-    private static final int SPRITE_HEIGHT = 62;
-    private static final int MOVE_SPEED = 5;
-
+    
+    private static final int PLAYER_SIZE = 40; // 충돌 판정 크기
+    
     private boolean p1UpPressed, p1DownPressed, p1LeftPressed, p1RightPressed;
     private boolean p2UpPressed, p2DownPressed, p2LeftPressed, p2RightPressed;
-
-    // 마지막으로 누른 키 추적 (추가)
+    
+    // 마지막으로 누른 키 추적
     private Integer p1LastKey = null;
     private Integer p2LastKey = null;
 
@@ -110,10 +136,10 @@ public class GamePanelPlaceholder extends JPanel {
     // ========== [7] 레이아웃 상수 ==========
     private static final int MAP_X = 15;
     private static final int MAP_Y = 15;
-    private static final int MAP_WIDTH = 570;
-    private static final int MAP_HEIGHT = 570;
-    private static final int RIGHT_PANEL_X = 600;
-    private static final int RIGHT_PANEL_WIDTH = 185;
+    private static final int MAP_WIDTH = 600; 
+    private static final int MAP_HEIGHT = 520;
+    private static final int RIGHT_PANEL_X = 630;
+    private static final int RIGHT_PANEL_WIDTH = 155;
 
     /**
      * 생성자: 게임 화면 초기화 (기존 호환용)
@@ -133,7 +159,7 @@ public class GamePanelPlaceholder extends JPanel {
         setBackground(new Color(50, 50, 50));
 
         // 1. 이미지 리소스 로드
-        loadCharacterSprites(); // 스프라이트 시트 로드
+        loadCharacterSprites();
         loadResultImages();
 
         // 2. 맵 시스템 초기화
@@ -172,7 +198,7 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 캐릭터 스프라이트 시트 로드 (8x4 그리드)
+     * 캐릭터 스프라이트 시트 로드 (마젠타 배경 투명 처리)
      */
     private void loadCharacterSprites() {
         try {
@@ -186,7 +212,6 @@ public class GamePanelPlaceholder extends JPanel {
             
             if (p1File.exists()) {
                 BufferedImage p1Sheet = ImageIO.read(p1File);
-                // 마젠타 배경을 투명하게 처리
                 BufferedImage p1Transparent = makeColorTransparent(p1Sheet, 0xFF00FF);
                 p1Sprites = loadSpriteSheet(p1Transparent);
                 System.out.println("1P 스프라이트 로드 성공! 크기: " + p1Sheet.getWidth() + "x" + p1Sheet.getHeight());
@@ -194,11 +219,10 @@ public class GamePanelPlaceholder extends JPanel {
                 System.err.println("1P 스프라이트 파일을 찾을 수 없습니다: " + p1File.getPath());
             }
             
-            // 2P 스프라이트 로드 (같은 파일 사용)
-            File p2File = new File(basePath + "BlueBazzi.png");
+            // 2P 스프라이트 로드
+            File p2File = new File(basePath + "BlueBazzi.jpg");
             if (p2File.exists()) {
                 BufferedImage p2Sheet = ImageIO.read(p2File);
-                // 마젠타 배경을 투명하게 처리
                 BufferedImage p2Transparent = makeColorTransparent(p2Sheet, 0xFF00FF);
                 p2Sprites = loadSpriteSheet(p2Transparent);
                 System.out.println("2P 스프라이트 로드 성공!");
@@ -209,6 +233,10 @@ public class GamePanelPlaceholder extends JPanel {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 스프라이트 시트를 8x4 그리드로 분할
+     */
     private BufferedImage[][] loadSpriteSheet(BufferedImage sheet) {
         if (sheet == null) {
             System.err.println("스프라이트 시트가 null입니다!");
@@ -237,12 +265,8 @@ public class GamePanelPlaceholder extends JPanel {
         return sprites;
     }
 
-    
     /**
-     * 특정 색상을 투명하게 처리 (SpriteStore 방식)
-     * @param image 원본 이미지
-     * @param colorToRemove 투명화할 색상 (0xRRGGBB, 예: 0xFF00FF = 마젠타)
-     * @return 투명 처리된 이미지
+     * 특정 색상을 투명하게 처리
      */
     private BufferedImage makeColorTransparent(BufferedImage image, int colorToRemove) {
         BufferedImage transparent = new BufferedImage(
@@ -250,25 +274,68 @@ public class GamePanelPlaceholder extends JPanel {
             image.getHeight(),
             BufferedImage.TYPE_INT_ARGB);
         
-        // 비교할 RGB 값 (알파 제외)
         int targetRGB = colorToRemove & 0x00FFFFFF;
         
-        // 모든 픽셀 순회
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 int pixel = image.getRGB(x, y);
                 int pixelRGB = pixel & 0x00FFFFFF;
                 
                 if (pixelRGB == targetRGB) {
-                    // 마젠타 색상 → 완전 투명
                     transparent.setRGB(x, y, 0x00000000);
                 } else {
-                    // 다른 색상 → 불투명 유지
                     transparent.setRGB(x, y, pixel | 0xFF000000);
                 }
             }
         }
         return transparent;
+    }
+
+    /**
+     * 캐릭터별 초기 스탯 설정
+     */
+    private void initCharacterStats() {
+        // 1P 스탯 초기화
+        if ("배찌".equals(p1CharacterName)) {
+            p1BombCount = 1;
+            p1BombRange = 1;
+            p1Speed = 4;
+            p1MaxBombCount = 6;
+            p1MaxBombRange = 7;
+            p1MaxSpeed = 9;
+        } else if ("디지니".equals(p1CharacterName)) {
+            p1BombCount = 2;
+            p1BombRange = 1;
+            p1Speed = 4;
+            p1MaxBombCount = 7;
+            p1MaxBombRange = 9;
+            p1MaxSpeed = 8;
+        }
+        
+        // 2P 스탯 초기화
+        if ("배찌".equals(p2CharacterName)) {
+            p2BombCount = 1;
+            p2BombRange = 1;
+            p2Speed = 4;
+            p2MaxBombCount = 6;
+            p2MaxBombRange = 7;
+            p2MaxSpeed = 9;
+        } else if ("디지니".equals(p2CharacterName)) {
+            p2BombCount = 2;
+            p2BombRange = 1;
+            p2Speed = 4;
+            p2MaxBombCount = 7;
+            p2MaxBombRange = 9;
+            p2MaxSpeed = 8;
+        }
+        
+        p1CurrentBombs = 0;
+        p2CurrentBombs = 0;
+        
+        System.out.println("1P(" + p1CharacterName + ") 스탯 - 개수:" + p1BombCount 
+                         + ", 물줄기:" + p1BombRange + ", 속도:" + p1Speed);
+        System.out.println("2P(" + p2CharacterName + ") 스탯 - 개수:" + p2BombCount 
+                         + ", 물줄기:" + p2BombRange + ", 속도:" + p2Speed);
     }
 
     /**
@@ -281,6 +348,8 @@ public class GamePanelPlaceholder extends JPanel {
         resetGame();
         p1UpPressed = p1DownPressed = p1LeftPressed = p1RightPressed = false;
         p2UpPressed = p2DownPressed = p2LeftPressed = p2RightPressed = false;
+        p1LastKey = null;
+        p2LastKey = null;
         startGameLoop();
         requestFocusInWindow();
     }
@@ -294,6 +363,8 @@ public class GamePanelPlaceholder extends JPanel {
         resetGame();
         p1UpPressed = p1DownPressed = p1LeftPressed = p1RightPressed = false;
         p2UpPressed = p2DownPressed = p2LeftPressed = p2RightPressed = false;
+        p1LastKey = null;
+        p2LastKey = null;
         startGameLoop();
         requestFocusInWindow();
         playInGameBGM();
@@ -388,54 +459,58 @@ public class GamePanelPlaceholder extends JPanel {
             tileWidth = MAP_WIDTH / TILE_COLS;
         if (tileHeight == 0)
             tileHeight = MAP_HEIGHT / TILE_ROWS;
-    
-        // 1. Player 1 이동 처리 (마지막에 누른 키만)
+
+        // 플레이어별 이동 속도 (스탯 기반)
+        int p1MoveSpeed = p1Speed;
+        int p2MoveSpeed = p2Speed;
+
+        // 1. Player 1 이동 처리 (마지막 키만)
         int newP1X = p1X, newP1Y = p1Y;
         
         if (p1LastKey != null) {
             if (p1LastKey == GameSettings.p1_Up) {
-                newP1Y = Math.max(MAP_Y, p1Y - MOVE_SPEED);
+                newP1Y = Math.max(MAP_Y, p1Y - p1MoveSpeed);
             } else if (p1LastKey == GameSettings.p1_Down) {
-                newP1Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p1Y + MOVE_SPEED);
+                newP1Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p1Y + p1MoveSpeed);
             } else if (p1LastKey == GameSettings.p1_Left) {
-                newP1X = Math.max(MAP_X, p1X - MOVE_SPEED);
+                newP1X = Math.max(MAP_X, p1X - p1MoveSpeed);
             } else if (p1LastKey == GameSettings.p1_Right) {
-                newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + MOVE_SPEED);
+                newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + p1MoveSpeed);
             }
         }
-    
+
         if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE))
             p1X = newP1X;
         if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE))
             p1Y = newP1Y;
-    
-        // 2. Player 2 이동 처리 (마지막에 누른 키만)
+
+        // 2. Player 2 이동 처리 (마지막 키만)
         int newP2X = p2X, newP2Y = p2Y;
         
         if (p2LastKey != null) {
             if (p2LastKey == GameSettings.p2_Up) {
-                newP2Y = Math.max(MAP_Y, p2Y - MOVE_SPEED);
+                newP2Y = Math.max(MAP_Y, p2Y - p2MoveSpeed);
             } else if (p2LastKey == GameSettings.p2_Down) {
-                newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + MOVE_SPEED);
+                newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + p2MoveSpeed);
             } else if (p2LastKey == GameSettings.p2_Left) {
-                newP2X = Math.max(MAP_X, p2X - MOVE_SPEED);
+                newP2X = Math.max(MAP_X, p2X - p2MoveSpeed);
             } else if (p2LastKey == GameSettings.p2_Right) {
-                newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + MOVE_SPEED);
+                newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + p2MoveSpeed);
             }
         }
-    
+
         if (!isCollidingWithBlock(newP2X, p2Y, PLAYER_SIZE))
             p2X = newP2X;
         if (!isCollidingWithBlock(p2X, newP2Y, PLAYER_SIZE))
             p2Y = newP2Y;
-    
+
         // 3. 스프라이트 애니메이션 업데이트
         updatePlayerAnimation(1);
         updatePlayerAnimation(2);
-    
+
         // 4. 물풍선 처리
         updateBombs();
-    
+
         // 5. 게임 타이머 및 결과 판정
         if (gameState == STATE_PLAYING) {
             long currentTime = System.currentTimeMillis();
@@ -450,7 +525,7 @@ public class GamePanelPlaceholder extends JPanel {
                 gameState = STATE_DRAW;
                 resultDisplayTime = System.currentTimeMillis();
             }
-    
+
             if (!p1Alive && p2Alive) {
                 gameState = STATE_P2_WIN;
                 resultDisplayTime = System.currentTimeMillis();
@@ -476,16 +551,14 @@ public class GamePanelPlaceholder extends JPanel {
      */
     private void updatePlayerAnimation(int player) {
         if (player == 1) {
-            // 1P 애니메이션 (움직이고 있을 때만)
             if (p1UpPressed || p1DownPressed || p1LeftPressed || p1RightPressed) {
                 p1FrameCounter++;
                 if (p1FrameCounter >= animationSpeed) {
                     p1FrameCounter = 0;
-                    p1SpriteCol = (p1SpriteCol + 1) % 8; // 0~7 순환
+                    p1SpriteCol = (p1SpriteCol + 1) % 8;
                 }
             }
         } else {
-            // 2P 애니메이션
             if (p2UpPressed || p2DownPressed || p2LeftPressed || p2RightPressed) {
                 p2FrameCounter++;
                 if (p2FrameCounter >= animationSpeed) {
@@ -515,6 +588,9 @@ public class GamePanelPlaceholder extends JPanel {
         p2SpriteCol = 0;
         p1FrameCounter = 0;
         p2FrameCounter = 0;
+        
+        // 캐릭터 스탯 초기화
+        initCharacterStats();
     }
 
     /**
@@ -557,6 +633,14 @@ public class GamePanelPlaceholder extends JPanel {
             WaterBomb bomb = it.next();
             if (bomb.shouldExplode()) {
                 explodeBomb(bomb);
+                
+                // 폭발 시 설치된 물풍선 개수 감소
+                if (bomb.owner == 1) {
+                    p1CurrentBombs--;
+                } else {
+                    p2CurrentBombs--;
+                }
+                
                 it.remove();
             }
         }
@@ -567,51 +651,89 @@ public class GamePanelPlaceholder extends JPanel {
      */
     private void explodeBomb(WaterBomb bomb) {
         bomb.exploded = true;
-        int[] dRows = { 0, -1, 1, 0, 0 };
-        int[] dCols = { 0, 0, 0, -1, 1 };
-
+        
         int bombRow = (bomb.y - MAP_Y) / tileHeight;
         int bombCol = (bomb.x - MAP_X) / tileWidth;
-
-        for (int i = 0; i < dRows.length; i++) {
-            int r = bombRow + dRows[i];
-            int c = bombCol + dCols[i];
-
-            if (r >= 0 && r < TILE_ROWS && c >= 0 && c < TILE_COLS) {
-                Tile tile = tiles[r][c];
-                if (tile != null) {
-                    tile.breakBlock();
+        
+        // 중심 폭발
+        explodeAtPosition(bombRow, bombCol);
+        
+        // 상하좌우로 bomb.range만큼 폭발
+        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        
+        for (int[] dir : directions) {
+            for (int i = 1; i <= bomb.range; i++) {
+                int r = bombRow + dir[0] * i;
+                int c = bombCol + dir[1] * i;
+                
+                if (r < 0 || r >= TILE_ROWS || c < 0 || c >= TILE_COLS) {
+                    break;
+                }
+                
+                // 벽에 막히면 중단
+                if (tiles[r][c] != null && tiles[r][c].getItemIndex() == 3) {
+                    break;
+                }
+                
+                explodeAtPosition(r, c);
+                
+                // 파괴 가능한 블록이 있으면 파괴 후 중단
+                if (tiles[r][c] != null && tiles[r][c].getItemIndex() == 4) {
+                    tiles[r][c].breakBlock();
+                    break;
                 }
             }
-
-            int tileMinX = MAP_X + c * tileWidth;
-            int tileMaxX = tileMinX + tileWidth;
-            int tileMinY = MAP_Y + r * tileHeight;
-            int tileMaxY = tileMinY + tileHeight;
-
-            int p1CenterX = p1X + PLAYER_SIZE / 2;
-            int p1CenterY = p1Y + PLAYER_SIZE / 2;
-            if (p1Alive && p1CenterX >= tileMinX && p1CenterX <= tileMaxX &&
-                    p1CenterY >= tileMinY && p1CenterY <= tileMaxY) {
-                p1Alive = false;
-                System.out.println("1P 사망!");
-            }
-
-            int p2CenterX = p2X + PLAYER_SIZE / 2;
-            int p2CenterY = p2Y + PLAYER_SIZE / 2;
-            if (p2Alive && p2CenterX >= tileMinX && p2CenterX <= tileMaxX &&
-                    p2CenterY >= tileMinY && p2CenterY <= tileMaxY) {
-                p2Alive = false;
-                System.out.println("2P 사망!");
-            }
         }
-        System.out.println("물풍선 폭발! 위치: (" + bombCol + ", " + bombRow + ")");
+        
+        System.out.println("물풍선 폭발! 위치: (" + bombCol + ", " + bombRow + "), 범위: " + bomb.range);
+    }
+
+    /**
+     * 특정 위치에서 폭발 처리
+     */
+    private void explodeAtPosition(int row, int col) {
+        if (row < 0 || row >= TILE_ROWS || col < 0 || col >= TILE_COLS) {
+            return;
+        }
+        
+        if (tiles[row][col] != null) {
+            tiles[row][col].breakBlock();
+        }
+        
+        int tileMinX = MAP_X + col * tileWidth;
+        int tileMaxX = tileMinX + tileWidth;
+        int tileMinY = MAP_Y + row * tileHeight;
+        int tileMaxY = tileMinY + tileHeight;
+        
+        int p1CenterX = p1X + PLAYER_SIZE / 2;
+        int p1CenterY = p1Y + PLAYER_SIZE / 2;
+        if (p1Alive && p1CenterX >= tileMinX && p1CenterX <= tileMaxX &&
+                p1CenterY >= tileMinY && p1CenterY <= tileMaxY) {
+            p1Alive = false;
+            System.out.println("1P 사망!");
+        }
+        
+        int p2CenterX = p2X + PLAYER_SIZE / 2;
+        int p2CenterY = p2Y + PLAYER_SIZE / 2;
+        if (p2Alive && p2CenterX >= tileMinX && p2CenterX <= tileMaxX &&
+                p2CenterY >= tileMinY && p2CenterY <= tileMaxY) {
+            p2Alive = false;
+            System.out.println("2P 사망!");
+        }
     }
 
     /**
      * 물풍선 설치
      */
     private void placeBomb(int playerX, int playerY, int owner) {
+        // 설치 개수 제한 확인
+        if (owner == 1 && p1CurrentBombs >= p1BombCount) {
+            return;
+        }
+        if (owner == 2 && p2CurrentBombs >= p2BombCount) {
+            return;
+        }
+        
         int centerX = playerX + PLAYER_SIZE / 2;
         int centerY = playerY + PLAYER_SIZE / 2;
 
@@ -630,29 +752,38 @@ public class GamePanelPlaceholder extends JPanel {
         int bombX = MAP_X + col * tileWidth + tileWidth / 2;
         int bombY = MAP_Y + row * tileHeight + tileHeight / 2;
 
-        bombs.add(new WaterBomb(bombX, bombY, row, col, owner));
-        System.out.println("물풍선 설치! " + owner + "P, 위치: (" + col + ", " + row + ")");
+        int range = (owner == 1) ? p1BombRange : p2BombRange;
+        
+        bombs.add(new WaterBomb(bombX, bombY, row, col, owner, range));
+        
+        if (owner == 1) {
+            p1CurrentBombs++;
+        } else {
+            p2CurrentBombs++;
+        }
+        
+        System.out.println("물풍선 설치! " + owner + "P, 위치: (" + col + ", " + row + "), 범위: " + range);
     }
 
     /**
-     * 키보드 눌림 처리 (스프라이트 방향 변경 포함)
+     * 키보드 눌림 처리
      */
     private void handleKeyPressed(KeyEvent e) {
         int key = e.getKeyCode();
-    
+
         if (key == KeyEvent.VK_ESCAPE) {
             stopGameLoop();
             mainFrame.showPanel(CrazyArcade_UI.PANEL_LOBBY);
             return;
         }
-    
+
         // 1P 조작키
         if (key == GameSettings.p1_Up) {
             if (!p1UpPressed) {
                 p1SpriteRow = 1;
                 p1SpriteCol = 0;
                 p1FrameCounter = 0;
-                p1LastKey = key; // 마지막 키 업데이트
+                p1LastKey = key;
             }
             p1UpPressed = true;
         }
@@ -687,7 +818,7 @@ public class GamePanelPlaceholder extends JPanel {
             if (p1Alive)
                 placeBomb(p1X, p1Y, 1);
         }
-    
+
         // 2P 조작키
         if (key == GameSettings.p2_Up) {
             if (!p2UpPressed) {
@@ -730,14 +861,13 @@ public class GamePanelPlaceholder extends JPanel {
                 placeBomb(p2X, p2Y, 2);
         }
     }
-    
+
     /**
-     * 키보드 뗌 처리 (마지막 키 리셋)
+     * 키보드 뗌 처리
      */
     private void handleKeyReleased(KeyEvent e) {
         int key = e.getKeyCode();
-    
-        // 1P 이동 멈춤
+
         if (key == GameSettings.p1_Up) {
             p1UpPressed = false;
             if (p1LastKey != null && p1LastKey == key) p1LastKey = null;
@@ -754,8 +884,7 @@ public class GamePanelPlaceholder extends JPanel {
             p1RightPressed = false;
             if (p1LastKey != null && p1LastKey == key) p1LastKey = null;
         }
-    
-        // 2P 이동 멈춤
+
         if (key == GameSettings.p2_Up) {
             p2UpPressed = false;
             if (p2LastKey != null && p2LastKey == key) p2LastKey = null;
@@ -851,7 +980,7 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 이미지의 마젠타 색상을 투명하게 변환
+     * 이미지의 마젠타 색상을 투명하게 변환 (결과 이미지용)
      */
     private Image makeTransparent(java.awt.image.BufferedImage img) {
         int width = img.getWidth();
@@ -899,7 +1028,7 @@ public class GamePanelPlaceholder extends JPanel {
     }
 
     /**
-     * 게임 맵 그리기 (스프라이트 애니메이션 포함)
+     * 게임 맵 그리기
      */
     private void drawGameMap(Graphics2D g2) {
         // 맵 배경
@@ -923,37 +1052,41 @@ public class GamePanelPlaceholder extends JPanel {
             bomb.draw(g2);
         }
 
-        // 플레이어 1 그리기 (44x62 크기)
+        // 플레이어 1 그리기
         if (p1Alive) {
-            if (p1Sprites != null && p1Sprites[p1SpriteRow] != null && p1Sprites[p1SpriteRow][p1SpriteCol] != null) {
+            if (p1Sprites != null && p1SpriteRow < SPRITE_ROWS && p1SpriteCol < SPRITE_COLS
+                && p1Sprites[p1SpriteRow] != null && p1Sprites[p1SpriteRow][p1SpriteCol] != null) {
+                
                 BufferedImage p1Frame = p1Sprites[p1SpriteRow][p1SpriteCol];
-                // 중앙 정렬: 판정 박스(40x40) 중심에 스프라이트(44x62)를 맞춤
                 int drawX = p1X - (SPRITE_WIDTH - PLAYER_SIZE) / 2;
                 int drawY = p1Y - (SPRITE_HEIGHT - PLAYER_SIZE);
+                
                 g2.drawImage(p1Frame, drawX, drawY, SPRITE_WIDTH, SPRITE_HEIGHT, null);
             } else {
-                // 스프라이트 로드 실패 시 빨간 사각형으로 대체
                 g2.setColor(Color.RED);
                 g2.fillRect(p1X, p1Y, PLAYER_SIZE, PLAYER_SIZE);
                 g2.setColor(Color.WHITE);
-                g2.drawString("1P", p1X + 10, p1Y + 25);
+                g2.setFont(new Font("Arial", Font.BOLD, 12));
+                g2.drawString("1P", p1X + 12, p1Y + 25);
             }
         }
 
-        // 플레이어 2 그리기 (44x62 크기)
+        // 플레이어 2 그리기
         if (p2Alive) {
-            if (p2Sprites != null && p2Sprites[p2SpriteRow] != null && p2Sprites[p2SpriteRow][p2SpriteCol] != null) {
+            if (p2Sprites != null && p2SpriteRow < SPRITE_ROWS && p2SpriteCol < SPRITE_COLS
+                && p2Sprites[p2SpriteRow] != null && p2Sprites[p2SpriteRow][p2SpriteCol] != null) {
+                
                 BufferedImage p2Frame = p2Sprites[p2SpriteRow][p2SpriteCol];
-                // 중앙 정렬
                 int drawX = p2X - (SPRITE_WIDTH - PLAYER_SIZE) / 2;
                 int drawY = p2Y - (SPRITE_HEIGHT - PLAYER_SIZE);
+                
                 g2.drawImage(p2Frame, drawX, drawY, SPRITE_WIDTH, SPRITE_HEIGHT, null);
             } else {
-                // 스프라이트 로드 실패 시 파란 사각형으로 대체
                 g2.setColor(Color.BLUE);
                 g2.fillRect(p2X, p2Y, PLAYER_SIZE, PLAYER_SIZE);
                 g2.setColor(Color.WHITE);
-                g2.drawString("2P", p2X + 10, p2Y + 25);
+                g2.setFont(new Font("Arial", Font.BOLD, 12));
+                g2.drawString("2P", p2X + 12, p2Y + 25);
             }
         }
     }
@@ -1090,11 +1223,9 @@ public class GamePanelPlaceholder extends JPanel {
             int textX = (getWidth() - fm.stringWidth(text)) / 2;
             int textY = (getHeight() + fm.getAscent()) / 2 + 100;
 
-            // 그림자
             g2.setColor(new Color(0, 0, 0, 150));
             g2.drawString(text, textX + 3, textY + 3);
 
-            // 텍스트
             g2.setColor(textColor);
             g2.drawString(text, textX, textY);
         }
@@ -1107,15 +1238,17 @@ public class GamePanelPlaceholder extends JPanel {
         int x, y;
         int row, col;
         int owner;
+        int range;
         long placeTime;
         boolean exploded;
 
-        public WaterBomb(int x, int y, int row, int col, int owner) {
+        public WaterBomb(int x, int y, int row, int col, int owner, int range) {
             this.x = x;
             this.y = y;
             this.row = row;
             this.col = col;
             this.owner = owner;
+            this.range = range;
             this.placeTime = System.currentTimeMillis();
             this.exploded = false;
         }
