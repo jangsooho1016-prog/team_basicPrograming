@@ -67,28 +67,51 @@ class WaterBalloon {
     private final long explodeTime;
     private final long startTime;
     private final int ownerPlayer;  // 1 또는 2
-    private static final int ANIMATION_DURATION_MS = 1000;  // 1초마다 1사이클
-    private static final int FRAME_COUNT = 7;  // 총 7개 프레임
+    private static final int FRAME_COUNT = 7;
+    private boolean collisionEnabled = false;  // ← 추가: 충돌 판정 활성화 여부
+
+    private final int installPlayerX;
+    private final int installPlayerY;
     
-    public WaterBalloon(int row, int col, long explodeTime, int range, int ownerPlayer) {
+    public WaterBalloon(int row, int col, long explodeTime, int range, int ownerPlayer, int playerX, int playerY) {
         this.row = row;
         this.col = col;
         this.explodeTime = explodeTime;
         this.range = range;
         this.ownerPlayer = ownerPlayer;
         this.startTime = System.currentTimeMillis();
+        this.collisionEnabled = false;
+        this.installPlayerX = playerX;
+        this.installPlayerY = playerY;
     }
     
-    // ← 수정된 부분
+    
     public int getCurrentFrameIndex() {
         long elapsedTime = System.currentTimeMillis() - startTime;
-        // 전체 애니메이션 주기: ANIMATION_DURATION_MS
-        // 각 프레임 표시 시간 계산
-        int frameTime = ANIMATION_DURATION_MS / FRAME_COUNT;  // 약 142ms per frame
-        int frameIndex = (int)(elapsedTime / frameTime) % FRAME_COUNT;
-        return frameIndex;
+        long totalDuration = explodeTime - startTime;
+        
+        if (totalDuration <= 0) return FRAME_COUNT - 1;
+        
+        // 폭탄이 터질 때까지 애니메이션 반복
+        int frameIndex = (int)((elapsedTime % 1000) * FRAME_COUNT / 1000);
+        return frameIndex % FRAME_COUNT;
     }
     
+    // ← 추가: 충돌 판정 활성화
+    public void enableCollision() {
+        this.collisionEnabled = true;
+    }
+    
+    // ← 추가: 충돌 판정 상태 확인
+    public boolean isCollisionEnabled() {
+        return collisionEnabled;
+    }
+    public int getInstallPlayerX() {
+        return installPlayerX;
+    }
+    public int getInstallPlayerY() {
+        return installPlayerY;
+    }
     public int getRow() { return row; }
     public int getCol() { return col; }
     public long getExplodeTime() { return explodeTime; }
@@ -548,86 +571,81 @@ public class GamePanelPlaceholder extends JPanel {
             if (startupFrameCount >= STARTUP_DELAY_FRAMES) {
                 itemCollisionEnabled = true;
                 startupFrameCount = 0;
+                System.out.println("아이템 충돌 활성화");
             }
         }
+        
+        // ← 추가: 물풍선 충돌 판정 업데이트
+        updateBalloonCollisions();
         
         int p1MoveSpeed = p1Speed;
         int p2MoveSpeed = p2Speed;
         
-        // 1. Player 1 이동
-        if (p1Alive && !p1Trapped) {
-            int newP1X = p1X, newP1Y = p1Y;
-            
-            if (p1LastKey != null) {
-                if (p1LastKey != null && p1LastKey == GameSettings.p1_Up) {
-                    newP1Y = Math.max(MAP_Y, p1Y - p1MoveSpeed);
-                } else if (p1LastKey == GameSettings.p1_Down) {
-                    newP1Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p1Y + p1MoveSpeed);
-                } else if (p1LastKey == GameSettings.p1_Left) {
-                    newP1X = Math.max(MAP_X, p1X - p1MoveSpeed);
-                } else if (p1LastKey == GameSettings.p1_Right) {
-                    newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + p1MoveSpeed);
-                }
-            }
-            
-            if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE)) {
-                p1X = newP1X;
-            }
-            if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE)) {
-                p1Y = newP1Y;
+        // 1. Player 1 이동 처리
+        int newP1X = p1X, newP1Y = p1Y;
+        if (p1LastKey != null) {
+            if (p1LastKey == GameSettings.p1_Up) {
+                newP1Y = Math.max(MAP_Y, p1Y - p1MoveSpeed);
+            } else if (p1LastKey == GameSettings.p1_Down) {
+                newP1Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p1Y + p1MoveSpeed);
+            } else if (p1LastKey == GameSettings.p1_Left) {
+                newP1X = Math.max(MAP_X, p1X - p1MoveSpeed);
+            } else if (p1LastKey == GameSettings.p1_Right) {
+                newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + p1MoveSpeed);
             }
         }
         
-        // 2. Player 2 이동
-        if (p2Alive && !p2Trapped) {
-            int newP2X = p2X, newP2Y = p2Y;
-            
-            if (p2LastKey != null) {
-                if (p2LastKey == GameSettings.p2_Up) {
-                    newP2Y = Math.max(MAP_Y, p2Y - p2MoveSpeed);
-                } else if (p2LastKey == GameSettings.p2_Down) {
-                    newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + p2MoveSpeed);
-                } else if (p2LastKey == GameSettings.p2_Left) {
-                    newP2X = Math.max(MAP_X, p2X - p2MoveSpeed);
-                } else if (p2LastKey == GameSettings.p2_Right) {
-                    newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + p2MoveSpeed);
-                }
-            }
-            
-            if (!isCollidingWithBlock(newP2X, p2Y, PLAYER_SIZE)) {
-                p2X = newP2X;
-            }
-            if (!isCollidingWithBlock(p2X, newP2Y, PLAYER_SIZE)) {
-                p2Y = newP2Y;
+        if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE) && !isCollidingWithBalloon(newP1X, p1Y, PLAYER_SIZE))
+            p1X = newP1X;
+        if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE) && !isCollidingWithBalloon(p1X, newP1Y, PLAYER_SIZE))
+            p1Y = newP1Y;
+        
+        // 2. Player 2 이동 처리
+        int newP2X = p2X, newP2Y = p2Y;
+        if (p2LastKey != null) {
+            if (p2LastKey == GameSettings.p2_Up) {
+                newP2Y = Math.max(MAP_Y, p2Y - p2MoveSpeed);
+            } else if (p2LastKey == GameSettings.p2_Down) {
+                newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + p2MoveSpeed);
+            } else if (p2LastKey == GameSettings.p2_Right) {
+                newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + p2MoveSpeed);
+            } else if (p2LastKey == GameSettings.p2_Left) {
+                newP2X = Math.max(MAP_X, p2X - p2MoveSpeed);
             }
         }
+        
+        if (!isCollidingWithBlock(newP2X, p2Y, PLAYER_SIZE) && !isCollidingWithBalloon(newP2X, p2Y, PLAYER_SIZE))
+            p2X = newP2X;
+        if (!isCollidingWithBlock(p2X, newP2Y, PLAYER_SIZE) && !isCollidingWithBalloon(p2X, newP2Y, PLAYER_SIZE))
+            p2Y = newP2Y;
         
         // 3. 아이템 충돌 체크
         if (itemCollisionEnabled) {
             checkItemCollision();
         }
         
-        // 4. 플레이어 애니메이션 업데이트
+        // 4. 스프라이트 애니메이션 업데이트
         updatePlayerAnimation(1);
         updatePlayerAnimation(2);
         
         // 5. 폭탄 시스템 업데이트
         updateBombSystem();
         
-        // 6. 게임 시간 업데이트
+        // 6. 게임 타이머 및 결과 판정
         if (gameState == STATE_PLAYING) {
             long currentTime = System.currentTimeMillis();
             if (lastTimerUpdate == 0) {
                 lastTimerUpdate = currentTime;
             }
+            
             if (currentTime - lastTimerUpdate >= 1000) {
                 remainingTime--;
                 lastTimerUpdate = currentTime;
-                
-                if (remainingTime <= 0) {
-                    gameState = STATE_DRAW;
-                    resultDisplayTime = System.currentTimeMillis();
-                }
+            }
+            
+            if (remainingTime <= 0) {
+                gameState = STATE_DRAW;
+                resultDisplayTime = System.currentTimeMillis();
             }
             
             if (!p1Alive && p2Alive) {
@@ -650,29 +668,43 @@ public class GamePanelPlaceholder extends JPanel {
         }
     }
     
+    
     // ===== 폭탄 시스템 업데이트 =====
     private void updateBombSystem() {
         long currentTime = System.currentTimeMillis();
         
-        // 1P 폭탄 폭발 확인
-        for (int i = p1Balloons.size() - 1; i >= 0; i--) {
-            if (i >= p1Balloons.size()) continue;
-            WaterBalloon balloon = p1Balloons.get(i);
-            
+        // ⭐ 수정: 복사본 리스트 생성하여 안전하게 순회
+        List<WaterBalloon> p1ToExplode = new ArrayList<>();
+        List<WaterBalloon> p2ToExplode = new ArrayList<>();
+        
+        // 1P 폭탄 폭발 확인 (터질 물풍선만 수집)
+        for (WaterBalloon balloon : p1Balloons) {
             if (currentTime >= balloon.getExplodeTime()) {
-                createExplosion(balloon.getRow(), balloon.getCol(), balloon.getRange());
-                p1Balloons.remove(i);
+                p1ToExplode.add(balloon);
             }
         }
         
-        // 2P 폭탄 폭발 확인
-        for (int i = p2Balloons.size() - 1; i >= 0; i--) {
-            if (i >= p2Balloons.size()) continue;
-            WaterBalloon balloon = p2Balloons.get(i);
-            
+        // 2P 폭탄 폭발 확인 (터질 물풍선만 수집)
+        for (WaterBalloon balloon : p2Balloons) {
             if (currentTime >= balloon.getExplodeTime()) {
+                p2ToExplode.add(balloon);
+            }
+        }
+        
+        // ⭐ 실제 폭발 처리 (수집한 물풍선들을 한 번에 처리)
+        for (WaterBalloon balloon : p1ToExplode) {
+            // 연쇄 폭발로 이미 삭제되었을 수 있으므로 다시 확인
+            if (p1Balloons.contains(balloon)) {
+                p1Balloons.remove(balloon);
                 createExplosion(balloon.getRow(), balloon.getCol(), balloon.getRange());
-                p2Balloons.remove(i);
+            }
+        }
+        
+        for (WaterBalloon balloon : p2ToExplode) {
+            // 연쇄 폭발로 이미 삭제되었을 수 있으므로 다시 확인
+            if (p2Balloons.contains(balloon)) {
+                p2Balloons.remove(balloon);
+                createExplosion(balloon.getRow(), balloon.getCol(), balloon.getRange());
             }
         }
         
@@ -705,7 +737,7 @@ public class GamePanelPlaceholder extends JPanel {
         }
         
         // 4방향 폭발
-        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};  // 위, 아래, 왼쪽, 오른쪽
+        int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
         List<int[]> chainExplosions = new ArrayList<>();
         
         for (int[] dir : directions) {
@@ -722,31 +754,33 @@ public class GamePanelPlaceholder extends JPanel {
                 int newRow = centerRow + dRow * i;
                 int newCol = centerCol + dCol * i;
                 
-                // 맵 범위 체크
                 if (newRow < 0 || newRow >= TILE_ROWS || newCol < 0 || newCol >= TILE_COLS) {
                     break;
                 }
                 
-                // 폭발 효과 추가
                 explosions.add(new Explosion(newRow, newCol, startTime, currentExplosionType));
                 
-                // 타일 확인
                 if (tiles != null) {
                     Tile tile = tiles[newRow][newCol];
                     if (tile != null) {
                         int itemIndex = tile.getItemIndex();
+
                         
-                        // 고정 블록(itemIndex == 3 또는 4)에 막힘
-                        if (itemIndex == 3 || itemIndex == 4) {
+                        // 파괴 가능한 블록(3)에 막힘 → 파괴 후 전파 중단
+                        if (itemIndex == 3) {
                             if (tile.isBreakable()) {
                                 tile.breakBlock();
                             }
                             break;
                         }
+                        if (itemIndex >= 0 && itemIndex <= 2) {
+                            tile.breakBlock();
+                            //break;
+                        }
                     }
                 }
                 
-                // 연쇄 폭발 확인 (다른 물풍선이 있으면)
+                // 연쇄 폭발 확인
                 WaterBalloon hitBalloon = getBalloonAt(newRow, newCol);
                 if (hitBalloon != null) {
                     chainExplosions.add(new int[]{newRow, newCol, hitBalloon.getRange()});
@@ -757,8 +791,12 @@ public class GamePanelPlaceholder extends JPanel {
         
         // 연쇄 폭발 처리
         for (int[] explosion : chainExplosions) {
-            removeBalloonAt(explosion[0], explosion[1]);
-            createExplosion(explosion[0], explosion[1], explosion[2]);
+            // getBalloonAt으로 다시 확인해서 존재하는 경우에만 삭제
+            WaterBalloon balloon = getBalloonAt(explosion[0], explosion[1]);
+            if (balloon != null) {
+                removeBalloonAt(explosion[0], explosion[1]);
+                createExplosion(explosion[0], explosion[1], explosion[2]);
+            }
         }
     }
     
@@ -913,6 +951,8 @@ public class GamePanelPlaceholder extends JPanel {
         p1Balloons.clear();
         p2Balloons.clear();
         explosions.clear();
+        
+        System.out.println("게임 초기화 완료");
     }
     
     private boolean isCollidingWithBlock(int x, int y, int size) {
@@ -934,7 +974,7 @@ public class GamePanelPlaceholder extends JPanel {
             Tile tile = tiles[row][col];
             if (tile != null) {
                 int itemIndex = tile.getItemIndex();
-                if (itemIndex == 3 || itemIndex == 4) {
+                if (itemIndex == 3) {
                     return true;
                 }
             }
@@ -1051,7 +1091,7 @@ public class GamePanelPlaceholder extends JPanel {
             if (getBalloonAt(p1TileRow, p1TileCol) != null) return;
             
             long explodeTime = System.currentTimeMillis() + BALLOON_DELAY_MS;
-            WaterBalloon newBalloon = new WaterBalloon(p1TileRow, p1TileCol, explodeTime, p1BombRange, 1);
+            WaterBalloon newBalloon = new WaterBalloon(p1TileRow, p1TileCol, explodeTime, p1BombRange, 1, p1X, p1Y);
             p1Balloons.add(newBalloon);
             
             System.out.println("1P 물풍선 설치: (" + p1TileRow + ", " + p1TileCol + ")");
@@ -1067,7 +1107,7 @@ public class GamePanelPlaceholder extends JPanel {
             if (getBalloonAt(p2TileRow, p2TileCol) != null) return;
             
             long explodeTime = System.currentTimeMillis() + BALLOON_DELAY_MS;
-            WaterBalloon newBalloon = new WaterBalloon(p2TileRow, p2TileCol, explodeTime, p2BombRange, 2);
+            WaterBalloon newBalloon = new WaterBalloon(p2TileRow, p2TileCol, explodeTime, p2BombRange, 2, p2X, p2Y);
             p2Balloons.add(newBalloon);
             
             System.out.println("2P 물풍선 설치: (" + p2TileRow + ", " + p2TileCol + ")");
@@ -1162,7 +1202,7 @@ public class GamePanelPlaceholder extends JPanel {
                 for (int c = 0; c < TILE_COLS; c++) {
                     int centerX = MAP_X + c * cellWidth + cellWidth / 2;
                     int centerY = MAP_Y + r * cellHeight + cellHeight / 2;
-                    boolean isBreakable = (data[r][c] == 4);
+                    boolean isBreakable = (data[r][c] >= 0 && data[r][c] <= 3);
                     tiles[r][c] = new Tile(centerX, centerY, data[r][c], isBreakable);
                 }
             }
@@ -1626,5 +1666,78 @@ public class GamePanelPlaceholder extends JPanel {
                     break;
             }
         }
+    }
+    private void updateBalloonCollisions() {
+        // 충분히 멀어진 거리 기준 (타일 크기의 60% 정도)
+        final int SAFE_DISTANCE = (int)(Math.min(tileWidth, tileHeight) * 1.2);
+        
+        // 1P 물풍선 체크
+        for (WaterBalloon balloon : p1Balloons) {
+            if (!balloon.isCollisionEnabled()) {
+                // 1P가 설치 위치에서 충분히 멀어졌는지 확인 (거리 기반)
+                int dx = (p1X + PLAYER_SIZE / 2) - (balloon.getInstallPlayerX() + PLAYER_SIZE / 2);
+                int dy = (p1Y + PLAYER_SIZE / 2) - (balloon.getInstallPlayerY() + PLAYER_SIZE / 2);
+                double distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > SAFE_DISTANCE) {
+                    balloon.enableCollision();
+                    System.out.println("1P 물풍선 충돌 활성화: 거리=" + (int)distance + " (기준: " + SAFE_DISTANCE + ")");
+                }
+            }
+        }
+        
+        // 2P 물풍선 체크
+        for (WaterBalloon balloon : p2Balloons) {
+            if (!balloon.isCollisionEnabled()) {
+                // 2P가 설치 위치에서 충분히 멀어졌는지 확인 (거리 기반)
+                int dx = (p2X + PLAYER_SIZE / 2) - (balloon.getInstallPlayerX() + PLAYER_SIZE / 2);
+                int dy = (p2Y + PLAYER_SIZE / 2) - (balloon.getInstallPlayerY() + PLAYER_SIZE / 2);
+                double distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > SAFE_DISTANCE) {
+                    balloon.enableCollision();
+                    System.out.println("2P 물풍선 충돌 활성화: 거리=" + (int)distance + " (기준: " + SAFE_DISTANCE + ")");
+                }
+            }
+        }
+    }
+    
+    /**
+     * 물풍선과의 충돌 감지 (충돌 판정이 활성화된 물풍선만)
+     */
+    private boolean isCollidingWithBalloon(int x, int y, int size) {
+        if (tileWidth == 0 || tileHeight == 0) return false;
+        
+        int[][] corners = {
+            {x + 5, y + 5},
+            {x + size - 5, y + 5},
+            {x + 5, y + size - 5},
+            {x + size - 5, y + size - 5}
+        };
+        
+        for (int[] corner : corners) {
+            int col = (corner[0] - MAP_X) / tileWidth;
+            int row = (corner[1] - MAP_Y) / tileHeight;
+            
+            if (row < 0 || row >= TILE_ROWS || col < 0 || col >= TILE_COLS) continue;
+            
+            // 1P 물풍선 체크
+            for (WaterBalloon balloon : p1Balloons) {
+                if (balloon.isCollisionEnabled() && 
+                    balloon.getRow() == row && balloon.getCol() == col) {
+                    return true;
+                }
+            }
+            
+            // 2P 물풍선 체크
+            for (WaterBalloon balloon : p2Balloons) {
+                if (balloon.isCollisionEnabled() && 
+                    balloon.getRow() == row && balloon.getCol() == col) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
 }

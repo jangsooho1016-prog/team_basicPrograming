@@ -10,12 +10,6 @@ import java.util.Random;
  * 타일 클래스 (Tile)
  * ========================================================
  * 맵 위의 개별 타일(블록/아이템)을 관리하는 클래스입니다.
- * 
- * 타일 인덱스 (itemIndex):
- * - 0: 빈 타일 (아무것도 표시 안 함)
- * - 1, 2, 3: 아이템 (물풍선, 물줄기, 스케이트 등)
- * - 4: 파괴 가능한 블록 (박스)
- * - 5: 파괴된 상태
  */
 public class Tile {
 
@@ -110,24 +104,34 @@ public class Tile {
     public int getItemIndex() {
         return itemIndex;
     }
-
-    /**
-     * 블록 파괴 처리
-     * 파괴 가능한 블록(4)이면 랜덤 아이템(1, 2)으로 변경,
-     * 아이템(1, 2)이면 빈 상태(5)로 변경합니다.
-     */
     public void breakBlock() {
-        if (this.IS_BREAKABLE) {
-            Random random = new Random();
-            if (itemIndex == 4) {
-                // [수정] 블록 → 랜덤 아이템 (1, 2 중에서 선택)
-                // 기존 코드는 1~3이었으나, 3번은 '안 부서지는 벽'이므로 제외함.
-                int randomItem = random.nextInt(2) + 1;
+        if (!this.IS_BREAKABLE) {
+            return;
+        }
+        
+        Random random = new Random();
+        
+        // 파괴 가능한 블록(3) → 랜덤 아이템 또는 파괴된 상태
+        if (itemIndex == 3) {
+            // 50% 확률로 아이템 드롭
+            if (random.nextBoolean()) {
+                // 0, 1, 2 중 랜덤 선택 (물풍선, 물줄기, 스케이트)
+                int randomItem = random.nextInt(3);  // ← 수정!
                 setItemIndex(randomItem);
-            } else if (itemIndex >= 1 && itemIndex <= 2) {
-                // 아이템(1, 2) → 빈 상태(5)
-                setItemIndex(5);
+                System.out.println("블록 파괴 → 아이템 " + randomItem + " 드롭!");
+            } else {
+                setItemIndex(4);  // 파괴된 상태
+                System.out.println("블록 파괴 → 빈 상태");
             }
+        } 
+        // 아이템(0, 1, 2) → 파괴된 상태(4)
+        else if (itemIndex >= 0 && itemIndex <= 2) {
+            setItemIndex(4);  // 파괴된 상태
+            System.out.println("아이템 " + itemIndex + " 파괴 → 빈 상태");
+        }
+        // 이미 파괴된 상태(4)는 무시
+        else if (itemIndex == 4) {
+            // 아무 것도 안 함
         }
     }
 
