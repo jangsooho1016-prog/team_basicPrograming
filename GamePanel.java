@@ -67,15 +67,6 @@ class WaterBalloon {
     
     public void update(long currentTime) {}
     
-    public double getScaleFactor() {
-        long remaining = explodeTime - System.currentTimeMillis();
-        double scale = 1.0;
-        if (remaining < 500) { 
-            scale = 0.5 + (remaining / 500.0) * 0.5;
-        }
-        return Math.max(0.5, scale);
-    }
-    
     public int getCurrentFrameIndex() {
         long elapsedTime = System.currentTimeMillis() - startTime;
         return (int) (elapsedTime / (ANIMATION_DURATION_MS / 7)); 
@@ -93,7 +84,8 @@ public class GamePanel extends JPanel implements KeyListener {
     private final int TILE_SIZE = 40;       
     private final int MAP_WIDTH = 40;       
     private final int MAP_HEIGHT = 30;      
-    private final int BALLOON_DELAY_MS = 2500;
+    private final int BALLOON_DELAY_MS = 3800;
+    private final int MAX_BALLOONS = 10;
     private final int GAME_TICK_MS = 16;    
     
     private final int BALLOON_DRAW_SIZE = TILE_SIZE; 
@@ -115,15 +107,12 @@ public class GamePanel extends JPanel implements KeyListener {
     private boolean isPlayerAlive = true;   
     private boolean isTrapped = false;  
 
-    private WaterBalloon activePlayerBalloon = null; 
-
     private BufferedImage backBuffer;
     private Graphics2D backGraphics;
 
     private BufferedImage waterBalloonSpriteSheet; 
     private BufferedImage trappedImage;   
     
-    // 5개의 개별 폭발 이미지 필드
     private BufferedImage explosionCenterImage;
     private BufferedImage explosionUpImage;
     private BufferedImage explosionDownImage;
@@ -157,19 +146,16 @@ public class GamePanel extends JPanel implements KeyListener {
         backGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         try {
-            waterBalloonSpriteSheet = loadAndTransformImage("/BlueBub.bmp", Color.BLACK);
-
-            explosionCenterImage = loadAndTransformImage("/explosion_center.bmp", Color.BLACK);
-            explosionUpImage = loadAndTransformImage("/explosion_up.bmp", Color.BLACK);
-            explosionDownImage = loadAndTransformImage("/explosion_down.bmp", Color.BLACK);
-            explosionLeftImage = loadAndTransformImage("/explosion_left.bmp", Color.BLACK);
-            explosionRightImage = loadAndTransformImage("/explosion_right.bmp", Color.BLACK);
-
-            trappedImage = loadAndTransformImage("/trapped_bubble.png", Color.BLACK);
+            waterBalloonSpriteSheet = loadAndTransformImage("res/BlueBub.bmp", Color.BLACK);
+            explosionCenterImage = loadAndTransformImage("res/explosion_center.bmp", Color.BLACK);
+            explosionUpImage = loadAndTransformImage("res/explosion_up.bmp", Color.BLACK);
+            explosionDownImage = loadAndTransformImage("res/explosion_down.bmp", Color.BLACK);
+            explosionLeftImage = loadAndTransformImage("res/explosion_left.bmp", Color.BLACK);
+            explosionRightImage = loadAndTransformImage("res/explosion_right.bmp", Color.BLACK);
+            trappedImage = loadAndTransformImage("res/trapped_bubble.png", Color.BLACK);
             
         } catch (IOException e) {
             e.printStackTrace();
-            System.err.println("이미지 파일을 로드할 수 없습니다. Classpath를 확인하세요.");
         }
     }
     
@@ -205,24 +191,27 @@ public class GamePanel extends JPanel implements KeyListener {
     private void updateGame() {
         long currentTime = System.currentTimeMillis();
 
-        List<WaterBalloon> explodedBalloons = new ArrayList<>();
-        for (WaterBalloon balloon : balloons) {
+        for (int i = balloons.size() - 1; i >= 0; i--) {
+            if (i >= balloons.size()) continue;
+            WaterBalloon balloon = balloons.get(i);
             balloon.update(currentTime);  
 
             if (currentTime >= balloon.getExplodeTime()) {
-                explodedBalloons.add(balloon);
                 createExplosion(balloon.getX(), balloon.getY(), balloon.getRange());
-                if (balloon == activePlayerBalloon) activePlayerBalloon = null;
+                if (i < balloons.size()) {
+                    balloons.remove(i);
+                }
             }
         }
-        balloons.removeAll(explodedBalloons); 
 
-        List<Explosion> finishedExplosions = new ArrayList<>();
-        for (Explosion explosion : explosions) {
+        for (int i = explosions.size() - 1; i >= 0; i--) {
+            if (i >= explosions.size()) continue;
+            Explosion explosion = explosions.get(i);
             explosion.update(currentTime); 
-            if (!explosion.isActive()) finishedExplosions.add(explosion); 
+            if (!explosion.isActive()) {
+                explosions.remove(i);
+            }
         }
-        explosions.removeAll(finishedExplosions); 
         
         if (isPlayerAlive && !isTrapped) { 
             for (Explosion exp : explosions) {
@@ -241,6 +230,7 @@ public class GamePanel extends JPanel implements KeyListener {
         mapData[centerY][centerX] = 0; 
         
         int[][] directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}}; 
+        List<int[]> chainExplosions = new ArrayList<>();
         
         for (int[] dir : directions) {
             int dx = dir[0];
@@ -260,7 +250,36 @@ public class GamePanel extends JPanel implements KeyListener {
                 
                 explosions.add(new Explosion(newX, newY, startTime, currentExplosionType));
                 
-                if (isWaterBalloonAt(newX, newY)) break; 
+                WaterBalloon hitBalloon = getBalloonAt(newX, newY);
+                if (hitBalloon != null) {
+                    chainExplosions.add(new int[]{newX, newY, hitBalloon.getRange()});
+                    break;
+                }
+            }
+        }
+        
+        for (int[] explosion : chainExplosions) {
+            removeBalloonAt(explosion[0], explosion[1]);
+            createExplosion(explosion[0], explosion[1], explosion[2]);
+        }
+    }
+    
+    private WaterBalloon getBalloonAt(int x, int y) {
+        for (WaterBalloon balloon : balloons) {
+            if (balloon.getX() == x && balloon.getY() == y) {
+                return balloon;
+            }
+        }
+        return null;
+    }
+    
+    private void removeBalloonAt(int x, int y) {
+        for (int i = balloons.size() - 1; i >= 0; i--) {
+            if (i >= balloons.size()) continue;
+            WaterBalloon balloon = balloons.get(i);
+            if (balloon.getX() == x && balloon.getY() == y) {
+                balloons.remove(i);
+                return;
             }
         }
     }
@@ -316,8 +335,7 @@ public class GamePanel extends JPanel implements KeyListener {
             int x = balloon.getX() * TILE_SIZE; 
             int y = balloon.getY() * TILE_SIZE; 
 
-            double scale = balloon.getScaleFactor(); 
-            int scaledDrawSize = (int)(BALLOON_DRAW_SIZE * scale); 
+            int scaledDrawSize = (int)(BALLOON_DRAW_SIZE);
             int scaledOffset = (scaledDrawSize - TILE_SIZE) / 2;
             
             int drawX = x - scaledOffset;
@@ -339,7 +357,6 @@ public class GamePanel extends JPanel implements KeyListener {
             }
         }
 
-        // 플레이어 및 갇힘 상태 그리기
         if (isPlayerAlive) {
             int px = playerPos.x * TILE_SIZE;
             int py = playerPos.y * TILE_SIZE;
@@ -401,7 +418,7 @@ public class GamePanel extends JPanel implements KeyListener {
     }
 
     private void placeWaterBalloon(int x, int y) {
-        if (activePlayerBalloon != null) {
+        if (balloons.size() >= MAX_BALLOONS) {
             return;
         }
 
@@ -414,8 +431,7 @@ public class GamePanel extends JPanel implements KeyListener {
         long explodeTime = System.currentTimeMillis() + BALLOON_DELAY_MS;
         WaterBalloon newBalloon = new WaterBalloon(x, y, explodeTime, playerRange);
 
-        balloons.add(newBalloon);   
-        activePlayerBalloon = newBalloon;   
+        balloons.add(newBalloon);
     }
 
     @Override public void keyTyped(KeyEvent e) {}
