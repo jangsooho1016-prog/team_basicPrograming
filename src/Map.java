@@ -16,7 +16,6 @@ import javax.imageio.ImageIO;
  * 
  * 사용 예시:
  * Map gameMap = new Map("forest24.png");
- * gameMap.drawMap(g2, 15, 15, 570, 570);
  */
 public class Map {
     // 맵 배경 이미지
