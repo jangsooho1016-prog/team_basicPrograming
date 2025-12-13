@@ -42,6 +42,7 @@ public class GamePanelPlaceholder extends JPanel {
     private Tile[][] tiles;
     private static final int TILE_ROWS = 13;
     private static final int TILE_COLS = 15;
+    private String currentMapDataFile = "mapData2.txt"; // 현재 사용 중인 맵 데이터 파일
 
     // ========== [3] 캐릭터 시스템 (스프라이트 애니메이션) ==========
     private BufferedImage[][] p1Sprites;
@@ -140,6 +141,10 @@ public class GamePanelPlaceholder extends JPanel {
     private static final int MAP_HEIGHT = 520;
     private static final int RIGHT_PANEL_X = 630;
     private static final int RIGHT_PANEL_WIDTH = 155;
+    // 아이템 충돌 플레그
+    private boolean itemCollisionEnabled = false;
+    private int startupFrameCount = 0;
+    private static final int STARTUP_DELAY_FRAMES = 10; // 약 0.16초 (10프레임)
 
     /**
      * 생성자: 게임 화면 초기화 (기존 호환용)
@@ -345,26 +350,37 @@ public class GamePanelPlaceholder extends JPanel {
     public void addNotify() {
         super.addNotify();
         loadSelectedMap();
+        loadTilesFromFile(); // 타일 재로드 추가
         resetGame();
         p1UpPressed = p1DownPressed = p1LeftPressed = p1RightPressed = false;
         p2UpPressed = p2DownPressed = p2LeftPressed = p2RightPressed = false;
         p1LastKey = null;
         p2LastKey = null;
+        itemCollisionEnabled = false; // 초기화
+        startupFrameCount = 0;
         startGameLoop();
         requestFocusInWindow();
     }
-
     /**
      * 게임 시작/재시작
      */
     public void startNewGame() {
         loadSelectedMap();
         loadSelectedCharacters();
+        
+        // 타일 재로드 (맵 초기화)
+        loadTilesFromFile();
+        
         resetGame();
         p1UpPressed = p1DownPressed = p1LeftPressed = p1RightPressed = false;
         p2UpPressed = p2DownPressed = p2LeftPressed = p2RightPressed = false;
         p1LastKey = null;
         p2LastKey = null;
+        
+        // 게임 루프 시작 전에 강제로 한 프레임 대기 (아이템 즉시 획득 방지)
+        // 초기 위치에서 아이템 획득 방지를 위한 딜레이 플래그 설정
+        itemCollisionEnabled = false;
+        
         startGameLoop();
         requestFocusInWindow();
         playInGameBGM();
@@ -407,13 +423,22 @@ public class GamePanelPlaceholder extends JPanel {
             return;
         String selectedMap = lobbyPanel.getSelectedMap();
         String mapFileName;
+        String mapDataFileName;
+        
         if ("Map1".equals(selectedMap)) {
             mapFileName = "forest24.png";
+            mapDataFileName = "mapData1.txt"; // Map1 전용 데이터
         } else {
             mapFileName = "map2.png";
+            mapDataFileName = "mapData2.txt"; // Map2 전용 데이터
         }
+        
         gameMap = new Map(mapFileName);
-        System.out.println("선택된 맵 로드: " + selectedMap + " (" + mapFileName + ")");
+        currentMapDataFile = mapDataFileName; // 현재 맵 데이터 파일 저장
+        
+        System.out.println("선택된 맵 로드: " + selectedMap + " (" + mapFileName + ", " + mapDataFileName + ")");
+        
+        loadTilesFromFile(); // 타일 로드
         initPlayerPositions();
         repaint();
     }
@@ -455,96 +480,111 @@ public class GamePanelPlaceholder extends JPanel {
      * 게임 상태 업데이트 (매 프레임 호출)
      */
     private void updateGame() {
-        if (tileWidth == 0)
-            tileWidth = MAP_WIDTH / TILE_COLS;
-        if (tileHeight == 0)
-            tileHeight = MAP_HEIGHT / TILE_ROWS;
+    if (tileWidth == 0)
+        tileWidth = MAP_WIDTH / TILE_COLS;
+    if (tileHeight == 0)
+        tileHeight = MAP_HEIGHT / TILE_ROWS;
 
-        // 플레이어별 이동 속도 (스탯 기반)
-        int p1MoveSpeed = p1Speed;
-        int p2MoveSpeed = p2Speed;
-
-        // 1. Player 1 이동 처리 (마지막 키만)
-        int newP1X = p1X, newP1Y = p1Y;
-        
-        if (p1LastKey != null) {
-            if (p1LastKey == GameSettings.p1_Up) {
-                newP1Y = Math.max(MAP_Y, p1Y - p1MoveSpeed);
-            } else if (p1LastKey == GameSettings.p1_Down) {
-                newP1Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p1Y + p1MoveSpeed);
-            } else if (p1LastKey == GameSettings.p1_Left) {
-                newP1X = Math.max(MAP_X, p1X - p1MoveSpeed);
-            } else if (p1LastKey == GameSettings.p1_Right) {
-                newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + p1MoveSpeed);
-            }
-        }
-
-        if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE))
-            p1X = newP1X;
-        if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE))
-            p1Y = newP1Y;
-
-        // 2. Player 2 이동 처리 (마지막 키만)
-        int newP2X = p2X, newP2Y = p2Y;
-        
-        if (p2LastKey != null) {
-            if (p2LastKey == GameSettings.p2_Up) {
-                newP2Y = Math.max(MAP_Y, p2Y - p2MoveSpeed);
-            } else if (p2LastKey == GameSettings.p2_Down) {
-                newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + p2MoveSpeed);
-            } else if (p2LastKey == GameSettings.p2_Left) {
-                newP2X = Math.max(MAP_X, p2X - p2MoveSpeed);
-            } else if (p2LastKey == GameSettings.p2_Right) {
-                newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + p2MoveSpeed);
-            }
-        }
-
-        if (!isCollidingWithBlock(newP2X, p2Y, PLAYER_SIZE))
-            p2X = newP2X;
-        if (!isCollidingWithBlock(p2X, newP2Y, PLAYER_SIZE))
-            p2Y = newP2Y;
-
-        // 3. 스프라이트 애니메이션 업데이트
-        updatePlayerAnimation(1);
-        updatePlayerAnimation(2);
-
-        // 4. 물풍선 처리
-        updateBombs();
-
-        // 5. 게임 타이머 및 결과 판정
-        if (gameState == STATE_PLAYING) {
-            long currentTime = System.currentTimeMillis();
-            if (lastTimerUpdate == 0) {
-                lastTimerUpdate = currentTime;
-            }
-            if (currentTime - lastTimerUpdate >= 1000) {
-                remainingTime--;
-                lastTimerUpdate = currentTime;
-            }
-            if (remainingTime <= 0) {
-                gameState = STATE_DRAW;
-                resultDisplayTime = System.currentTimeMillis();
-            }
-
-            if (!p1Alive && p2Alive) {
-                gameState = STATE_P2_WIN;
-                resultDisplayTime = System.currentTimeMillis();
-            } else if (p1Alive && !p2Alive) {
-                gameState = STATE_P1_WIN;
-                resultDisplayTime = System.currentTimeMillis();
-            } else if (!p1Alive && !p2Alive) {
-                gameState = STATE_DRAW;
-                resultDisplayTime = System.currentTimeMillis();
-            }
-        } else {
-            if (System.currentTimeMillis() - resultDisplayTime >= RESULT_DISPLAY_DURATION) {
-                stopGameLoop();
-                resetGame();
-                playLobbyBGM();
-                mainFrame.showPanel(CrazyArcade_UI.PANEL_LOBBY);
-            }
+    // 게임 시작 초기 프레임 카운트 (아이템 즉시 획득 방지)
+    if (!itemCollisionEnabled) {
+        startupFrameCount++;
+        if (startupFrameCount >= STARTUP_DELAY_FRAMES) {
+            itemCollisionEnabled = true;
+            startupFrameCount = 0;
+            System.out.println("아이템 충돌 활성화");
         }
     }
+
+    // 플레이어별 이동 속도 (스탯 기반)
+    int p1MoveSpeed = p1Speed;
+    int p2MoveSpeed = p2Speed;
+
+    // 1. Player 1 이동 처리
+    int newP1X = p1X, newP1Y = p1Y;
+    
+    if (p1LastKey != null) {
+        if (p1LastKey == GameSettings.p1_Up) {
+            newP1Y = Math.max(MAP_Y, p1Y - p1MoveSpeed);
+        } else if (p1LastKey == GameSettings.p1_Down) {
+            newP1Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p1Y + p1MoveSpeed);
+        } else if (p1LastKey == GameSettings.p1_Left) {
+            newP1X = Math.max(MAP_X, p1X - p1MoveSpeed);
+        } else if (p1LastKey == GameSettings.p1_Right) {
+            newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + p1MoveSpeed);
+        }
+    }
+
+    if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE))
+        p1X = newP1X;
+    if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE))
+        p1Y = newP1Y;
+
+    // 2. Player 2 이동 처리
+    int newP2X = p2X, newP2Y = p2Y;
+    
+    if (p2LastKey != null) {
+        if (p2LastKey == GameSettings.p2_Up) {
+            newP2Y = Math.max(MAP_Y, p2Y - p2MoveSpeed);
+        } else if (p2LastKey == GameSettings.p2_Down) {
+            newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + p2MoveSpeed);
+        } else if (p2LastKey == GameSettings.p2_Left) {
+            newP2X = Math.max(MAP_X, p2X - p2MoveSpeed);
+        } else if (p2LastKey == GameSettings.p2_Right) {
+            newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + p2MoveSpeed);
+        }
+    }
+
+    if (!isCollidingWithBlock(newP2X, p2Y, PLAYER_SIZE))
+        p2X = newP2X;
+    if (!isCollidingWithBlock(p2X, newP2Y, PLAYER_SIZE))
+        p2Y = newP2Y;
+
+    // 3. 아이템 충돌 체크 (활성화된 경우만)
+    if (itemCollisionEnabled) {
+        checkItemCollision();
+    }
+
+    // 4. 스프라이트 애니메이션 업데이트
+    updatePlayerAnimation(1);
+    updatePlayerAnimation(2);
+
+    // 5. 물풍선 처리
+    updateBombs();
+
+    // 6. 게임 타이머 및 결과 판정
+    if (gameState == STATE_PLAYING) {
+        long currentTime = System.currentTimeMillis();
+        if (lastTimerUpdate == 0) {
+            lastTimerUpdate = currentTime;
+        }
+        if (currentTime - lastTimerUpdate >= 1000) {
+            remainingTime--;
+            lastTimerUpdate = currentTime;
+        }
+        if (remainingTime <= 0) {
+            gameState = STATE_DRAW;
+            resultDisplayTime = System.currentTimeMillis();
+        }
+
+        if (!p1Alive && p2Alive) {
+            gameState = STATE_P2_WIN;
+            resultDisplayTime = System.currentTimeMillis();
+        } else if (p1Alive && !p2Alive) {
+            gameState = STATE_P1_WIN;
+            resultDisplayTime = System.currentTimeMillis();
+        } else if (!p1Alive && !p2Alive) {
+            gameState = STATE_DRAW;
+            resultDisplayTime = System.currentTimeMillis();
+        }
+    } else {
+        if (System.currentTimeMillis() - resultDisplayTime >= RESULT_DISPLAY_DURATION) {
+            stopGameLoop();
+            resetGame();
+            playLobbyBGM();
+            mainFrame.showPanel(CrazyArcade_UI.PANEL_LOBBY);
+        }
+    }
+}
 
     /**
      * 플레이어 애니메이션 업데이트
@@ -591,6 +631,11 @@ public class GamePanelPlaceholder extends JPanel {
         
         // 캐릭터 스탯 초기화
         initCharacterStats();
+        
+        // 타일 재로드 (맵 초기화) - 추가!
+        loadTilesFromFile();
+        
+        System.out.println("게임 초기화 완료");
     }
 
     /**
@@ -909,6 +954,7 @@ public class GamePanelPlaceholder extends JPanel {
     private void initMapSystem() {
         try {
             gameMap = new Map("map2.png");
+            currentMapDataFile = "mapData2.txt"; // 기본 맵 데이터
             SpriteStore.init();
             loadTilesFromFile();
             System.out.println("맵 시스템 초기화 완료");
@@ -923,12 +969,13 @@ public class GamePanelPlaceholder extends JPanel {
      */
     private void loadTilesFromFile() {
         try {
-            String path = System.getProperty("user.dir") + File.separator + "mapData.txt";
+            // currentMapDataFile에 저장된 파일명 사용
+            String path = System.getProperty("user.dir") + File.separator + currentMapDataFile;
             int[][] data = new int[TILE_ROWS][TILE_COLS];
             BufferedReader br = new BufferedReader(new FileReader(path));
             String line;
             int row = 0;
-
+    
             while ((line = br.readLine()) != null && row < TILE_ROWS) {
                 line = line.trim();
                 if (line.isEmpty())
@@ -940,11 +987,11 @@ public class GamePanelPlaceholder extends JPanel {
                 row++;
             }
             br.close();
-
+    
             tiles = new Tile[TILE_ROWS][TILE_COLS];
             int cellWidth = MAP_WIDTH / TILE_COLS;
             int cellHeight = MAP_HEIGHT / TILE_ROWS;
-
+    
             for (int r = 0; r < TILE_ROWS; r++) {
                 for (int c = 0; c < TILE_COLS; c++) {
                     int centerX = MAP_X + c * cellWidth + cellWidth / 2;
@@ -953,12 +1000,13 @@ public class GamePanelPlaceholder extends JPanel {
                     tiles[r][c] = new Tile(centerX, centerY, data[r][c], isBreakable);
                 }
             }
-            System.out.println("타일 로드 완료: " + TILE_ROWS + "x" + TILE_COLS);
+            System.out.println("타일 로드 완료: " + TILE_ROWS + "x" + TILE_COLS + " (파일: " + currentMapDataFile + ")");
         } catch (IOException e) {
-            System.err.println("mapData.txt 로드 실패: " + e.getMessage());
+            System.err.println("맵 데이터 로드 실패 (" + currentMapDataFile + "): " + e.getMessage());
             e.printStackTrace();
         }
     }
+    
 
     /**
      * 결과 이미지 로드
@@ -1281,6 +1329,120 @@ public class GamePanelPlaceholder extends JPanel {
             g2.setFont(new Font("Arial", Font.BOLD, 10));
             String ownerText = owner == 1 ? "1P" : "2P";
             g2.drawString(ownerText, x - 8, y + 4);
+        }
+    }
+    /**
+ * 아이템 충돌 체크 및 획득 처리
+ * updateGame() 메서드에서 매 프레임마다 호출
+ */
+private void checkItemCollision() {
+    if (tiles == null) return;
+    
+    // Player 1 아이템 체크
+    if (p1Alive) {
+        checkPlayerItemCollision(p1X, p1Y, 1);
+    }
+    
+    // Player 2 아이템 체크
+    if (p2Alive) {
+        checkPlayerItemCollision(p2X, p2Y, 2);
+    }
+}
+
+/**
+ * 플레이어별 아이템 충돌 체크
+ */
+private void checkPlayerItemCollision(int playerX, int playerY, int playerNum) {
+    // 플레이어 중심점 계산
+    int centerX = playerX + PLAYER_SIZE / 2;
+    int centerY = playerY + PLAYER_SIZE / 2;
+    
+    // 해당하는 타일 좌표
+    int col = (centerX - MAP_X) / tileWidth;
+    int row = (centerY - MAP_Y) / tileHeight;
+    
+    // 맵 범위 체크
+    if (row < 0 || row >= TILE_ROWS || col < 0 || col >= TILE_COLS) {
+        return;
+    }
+    
+    Tile tile = tiles[row][col];
+    if (tile == null) return;
+    
+    int itemIndex = tile.getItemIndex();
+    
+    // 아이템 타일 (0, 1, 2)과 충돌 시 처리
+    if (itemIndex >= 0 && itemIndex <= 2) {
+        // 아이템 획득 처리
+        acquireItem(playerNum, itemIndex);
+        
+        // 타일을 5번 (빈 공간)으로 변경
+        tile.setItemIndex(5);
+        
+        System.out.println(playerNum + "P가 아이템 " + itemIndex + " 획득!");
+    }
+}
+
+    /**
+     * 아이템 획득 처리
+     * @param playerNum 플레이어 번호 (1 또는 2)
+     * @param itemType 아이템 타입 (0: 물풍선, 1: 물줄기, 2: 속도)
+     */
+    private void acquireItem(int playerNum, int itemType) {
+        if (playerNum == 1) {
+            switch (itemType) {
+                case 0: // 물풍선 개수 증가
+                    if (p1BombCount < p1MaxBombCount) {
+                        p1BombCount++;
+                        System.out.println("1P 물풍선 개수: " + p1BombCount + "/" + p1MaxBombCount);
+                    } else {
+                        System.out.println("1P 물풍선 최대치!");
+                    }
+                    break;
+                case 1: // 물줄기 길이 증가
+                    if (p1BombRange < p1MaxBombRange) {
+                        p1BombRange++;
+                        System.out.println("1P 물줄기 길이: " + p1BombRange + "/" + p1MaxBombRange);
+                    } else {
+                        System.out.println("1P 물줄기 최대치!");
+                    }
+                    break;
+                case 2: // 속도 증가
+                    if (p1Speed < p1MaxSpeed) {
+                        p1Speed++;
+                        System.out.println("1P 속도: " + p1Speed + "/" + p1MaxSpeed);
+                    } else {
+                        System.out.println("1P 속도 최대치!");
+                    }
+                    break;
+            }
+        } else if (playerNum == 2) {
+            switch (itemType) {
+                case 0: // 물풍선 개수 증가
+                    if (p2BombCount < p2MaxBombCount) {
+                        p2BombCount++;
+                        System.out.println("2P 물풍선 개수: " + p2BombCount + "/" + p2MaxBombCount);
+                    } else {
+                        System.out.println("2P 물풍선 최대치!");
+                    }
+                    break;
+                case 1: // 물줄기 길이 증가
+                    if (p2BombRange < p2MaxBombRange) {
+                        p2BombRange++;
+                        System.out.println("2P 물줄기 길이: " + p2BombRange + "/" + p2MaxBombRange);
+                    } else {
+                        System.out.println("2P 물줄기 최대치!");
+                    }
+                    break;
+                case 2: // 속도 증가
+                    if (p2Speed < p2MaxSpeed) {
+                        p2Speed++;
+                        System.out.println("2P 속도: " + p2Speed + "/" + p2MaxSpeed);
+                    } else {
+                        System.out.println("2P 속도 최대치!");
+                    }
+                    break;
+            }
         }
     }
 }
