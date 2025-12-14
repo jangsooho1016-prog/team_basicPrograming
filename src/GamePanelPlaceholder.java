@@ -155,7 +155,7 @@ public class GamePanelPlaceholder extends JPanel {
     private int p1FrameCounter = 0;
     private int p2FrameCounter = 0;
     
-    private String p1CharacterName = "바찌";
+    private String p1CharacterName = "배찌";
     private String p2CharacterName = "다오";
     
     // 3-2) 플레이어 능력치
@@ -244,7 +244,40 @@ public class GamePanelPlaceholder extends JPanel {
     private static final int BALLOON_FRAME_COUNT = 7;
     private static final int EXP_FRAME_COUNT = 5;
     private static final int EXP_FRAME_WIDTH = 40;
+
+    // Trapped/Die 스프라이트
+    private BufferedImage[][] trappedSprites;  // 2행 8열 (1행: 배찌, 2행: 디지니)
+    private BufferedImage[][] dieSprites;      // 4행 8열 (RedBazzi, BlueBazzi, RedDizni, BlueDizni)
+
+    // Trapped 시작 시간
+    private long p1TrappedStartTime = 0;
+    private long p2TrappedStartTime = 0;
+
+    // Die 애니메이션 시작 시간
+    private long p1DieStartTime = 0;
+    private long p2DieStartTime = 0;
+
+    // 상태 관리
+    private static final int PLAYER_STATE_ALIVE = 0;
+    private static final int PLAYER_STATE_TRAPPED = 1;
+    private static final int PLAYER_STATE_DYING = 2;
+    private static final int PLAYER_STATE_DEAD = 3;
     
+    // 시간 상수
+    private static final long TRAPPED_DURATION = 6000; // 6초
+    private static final long DIE_ANIMATION_DURATION = 1000; // 1초
+
+    // 애니메이션 프레임 설정
+    private static final int TRAPPED_SPRITE_ROWS = 2;
+    private static final int TRAPPED_SPRITE_COLS = 16;
+    private static final int DIE_SPRITE_ROWS = 4;
+    private static final int DIE_SPRITE_COLS = 8;
+
+    // 추가: 플레이어 상태 변수
+    private int p1State = PLAYER_STATE_ALIVE;
+    private int p2State = PLAYER_STATE_ALIVE;
+    
+
     public GamePanelPlaceholder(CrazyArcade_UI mainFrame) {
         this(mainFrame, null);
     }
@@ -302,7 +335,7 @@ public class GamePanelPlaceholder extends JPanel {
             
             // ⭐ 1P 스프라이트 로드 (캐릭터에 따라 다른 파일)
             String p1FileName;
-            if ("바찌".equals(p1CharacterName)) {
+            if ("배찌".equals(p1CharacterName)) {
                 p1FileName = "RedBazzi.png";
                 p1SpriteWidth = 44;
                 p1SpriteHeight = 62;
@@ -327,7 +360,7 @@ public class GamePanelPlaceholder extends JPanel {
             
             // ⭐ 2P 스프라이트 로드 (캐릭터에 따라 다른 파일)
             String p2FileName;
-            if ("바찌".equals(p2CharacterName)) {
+            if ("배찌".equals(p2CharacterName)) {
                 p2FileName = "BlueBazzi.png";
                 p2SpriteWidth = 44;
                 p2SpriteHeight = 62;
@@ -366,7 +399,20 @@ public class GamePanelPlaceholder extends JPanel {
             explosionDownImage = loadAndTransformImage(basePath + "explosion_down.bmp", Color.BLACK);
             explosionLeftImage = loadAndTransformImage(basePath + "explosion_left.bmp", Color.BLACK);
             explosionRightImage = loadAndTransformImage(basePath + "explosion_right.bmp", Color.BLACK);
-            trappedImage = loadAndTransformImage(basePath + "trappedbubble.png", Color.BLACK);
+            
+            // ⭐ Trapped 스프라이트 로드 (보라색 배경 제거)
+            BufferedImage trappedSheet = loadAndTransformImage(basePath + "Trapped.png", new Color(255, 0, 255));  // 보라색 #FF00FF
+            if (trappedSheet != null) {
+                trappedSprites = loadSpriteSheet(trappedSheet, TRAPPED_SPRITE_ROWS, TRAPPED_SPRITE_COLS);
+                System.out.println("Trapped 스프라이트 로드 완료");
+            }
+            
+            // ⭐ Die 스프라이트 로드 (보라색 배경 제거)
+            BufferedImage dieSheet = loadAndTransformImage(basePath + "Die.png", new Color(255, 0, 255));  // 보라색 #FF00FF
+            if (dieSheet != null) {
+                dieSprites = loadSpriteSheet(dieSheet, DIE_SPRITE_ROWS, DIE_SPRITE_COLS);
+                System.out.println("Die 스프라이트 로드 완료");
+            }
             
         } catch (IOException e) {
             System.err.println("폭탄 스프라이트 로드 실패!");
@@ -428,25 +474,30 @@ public class GamePanelPlaceholder extends JPanel {
         g.dispose();
         return dest;
     }
-    
-    private BufferedImage[][] loadSpriteSheet(BufferedImage sheet, int rows, int cols)  {
-        if (sheet == null) {
-            System.err.println("스프라이트 시트가 null입니다!");
-            return null;
-        }
-        
-        BufferedImage[][] sprites = new BufferedImage[SPRITE_ROWS][SPRITE_COLS];
-        int spriteWidth = sheet.getWidth() / SPRITE_COLS;
-        int spriteHeight = sheet.getHeight() / SPRITE_ROWS;
-        
-        for (int row = 0; row < SPRITE_ROWS; row++) {
-            for (int col = 0; col < SPRITE_COLS; col++) {
-                sprites[row][col] = sheet.getSubimage(
-                    col * spriteWidth, row * spriteHeight, spriteWidth, spriteHeight);
-            }
-        }
-        return sprites;
+    private BufferedImage[][] loadSpriteSheet(BufferedImage sheet) {
+        return loadSpriteSheet(sheet, SPRITE_ROWS, SPRITE_COLS);
     }
+
+    private BufferedImage[][] loadSpriteSheet(BufferedImage sheet, int rows, int cols) {
+    if (sheet == null) {
+        System.err.println("스프라이트 시트가 null입니다!");
+        return null;
+    }
+    
+    BufferedImage[][] sprites = new BufferedImage[rows][cols];
+    int spriteWidth = sheet.getWidth() / cols;
+    int spriteHeight = sheet.getHeight() / rows;
+    
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+            sprites[row][col] = sheet.getSubimage(
+                col * spriteWidth, row * spriteHeight, spriteWidth, spriteHeight);
+        }
+    }
+    
+    return sprites;
+}
+    
     
     private BufferedImage makeColorTransparent(BufferedImage image, int colorToRemove) {
         BufferedImage transparent = new BufferedImage(
@@ -470,7 +521,7 @@ public class GamePanelPlaceholder extends JPanel {
     }
     
     private void initCharacterStats() {
-        if ("바찌".equals(p1CharacterName)) {
+        if ("배찌".equals(p1CharacterName)) {
             p1BombCount = 1;
             p1BombRange = 1;
             p1Speed = 4;
@@ -486,7 +537,7 @@ public class GamePanelPlaceholder extends JPanel {
             p1MaxSpeed = 8;
         }
         
-        if ("바찌".equals(p2CharacterName)) {
+        if ("배찌".equals(p2CharacterName)) {
             p2BombCount = 1;
             p2BombRange = 1;
             p2Speed = 4;
@@ -614,15 +665,32 @@ public class GamePanelPlaceholder extends JPanel {
             }
         }
         
-        // ← 추가: 물풍선 충돌 판정 업데이트
         updateBalloonCollisions();
         
-        int p1MoveSpeed = p1Speed;
-        int p2MoveSpeed = p2Speed;
+        // ⭐ 수정: 상태에 따라 속도 조정
+    int p1MoveSpeed;
+        if (p1State == PLAYER_STATE_ALIVE) {
+            p1MoveSpeed = p1Speed;
+        } else if (p1State == PLAYER_STATE_TRAPPED) {
+            p1MoveSpeed = 1;  // Trapped 상태에서만 속도 1
+        } else {
+            p1MoveSpeed = 0;  // Dying/Dead 상태에서는 이동 불가
+        }
+        
+        int p2MoveSpeed;
+        if (p2State == PLAYER_STATE_ALIVE) {
+            p2MoveSpeed = p2Speed;
+        } else if (p2State == PLAYER_STATE_TRAPPED) {
+            p2MoveSpeed = 1;  // Trapped 상태에서만 속도 1
+        } else {
+            p2MoveSpeed = 0;  // Dying/Dead 상태에서는 이동 불가
+        }
         
         // 1. Player 1 이동 처리
         int newP1X = p1X, newP1Y = p1Y;
-        if (p1LastKey != null) {
+        
+        // ⭐ 수정: ALIVE 또는 TRAPPED 상태일 때만 이동 가능
+        if ((p1State == PLAYER_STATE_ALIVE || p1State == PLAYER_STATE_TRAPPED) && p1LastKey != null) {
             if (p1LastKey == GameSettings.p1_Up) {
                 newP1Y = Math.max(MAP_Y, p1Y - p1MoveSpeed);
             } else if (p1LastKey == GameSettings.p1_Down) {
@@ -632,40 +700,51 @@ public class GamePanelPlaceholder extends JPanel {
             } else if (p1LastKey == GameSettings.p1_Right) {
                 newP1X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p1X + p1MoveSpeed);
             }
+            
+            if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE) && !isCollidingWithBalloon(newP1X, p1Y, PLAYER_SIZE))
+                p1X = newP1X;
+            if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE) && !isCollidingWithBalloon(p1X, newP1Y, PLAYER_SIZE))
+                p1Y = newP1Y;
         }
-        
-        if (!isCollidingWithBlock(newP1X, p1Y, PLAYER_SIZE) && !isCollidingWithBalloon(newP1X, p1Y, PLAYER_SIZE))
-            p1X = newP1X;
-        if (!isCollidingWithBlock(p1X, newP1Y, PLAYER_SIZE) && !isCollidingWithBalloon(p1X, newP1Y, PLAYER_SIZE))
-            p1Y = newP1Y;
-        
-        // 2. Player 2 이동 처리
-        int newP2X = p2X, newP2Y = p2Y;
-        if (p2LastKey != null) {
-            if (p2LastKey == GameSettings.p2_Up) {
-                newP2Y = Math.max(MAP_Y, p2Y - p2MoveSpeed);
-            } else if (p2LastKey == GameSettings.p2_Down) {
-                newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + p2MoveSpeed);
-            } else if (p2LastKey == GameSettings.p2_Right) {
-                newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + p2MoveSpeed);
-            } else if (p2LastKey == GameSettings.p2_Left) {
-                newP2X = Math.max(MAP_X, p2X - p2MoveSpeed);
-            }
+    
+    // 2. Player 2 이동 처리
+    int newP2X = p2X, newP2Y = p2Y;
+    
+    // ⭐ 수정: ALIVE 또는 TRAPPED 상태일 때만 이동 가능
+    if ((p2State == PLAYER_STATE_ALIVE || p2State == PLAYER_STATE_TRAPPED) && p2LastKey != null) {
+        if (p2LastKey == GameSettings.p2_Up) {
+            newP2Y = Math.max(MAP_Y, p2Y - p2MoveSpeed);
+        } else if (p2LastKey == GameSettings.p2_Down) {
+            newP2Y = Math.min(MAP_Y + MAP_HEIGHT - PLAYER_SIZE, p2Y + p2MoveSpeed);
+        } else if (p2LastKey == GameSettings.p2_Right) {
+            newP2X = Math.min(MAP_X + MAP_WIDTH - PLAYER_SIZE, p2X + p2MoveSpeed);
+        } else if (p2LastKey == GameSettings.p2_Left) {
+            newP2X = Math.max(MAP_X, p2X - p2MoveSpeed);
         }
         
         if (!isCollidingWithBlock(newP2X, p2Y, PLAYER_SIZE) && !isCollidingWithBalloon(newP2X, p2Y, PLAYER_SIZE))
             p2X = newP2X;
         if (!isCollidingWithBlock(p2X, newP2Y, PLAYER_SIZE) && !isCollidingWithBalloon(p2X, newP2Y, PLAYER_SIZE))
             p2Y = newP2Y;
+    }
         
-        // 3. 아이템 충돌 체크
+        // 3. 아이템 충돌 체크 (살아있을 때만)
         if (itemCollisionEnabled) {
-            checkItemCollision();
+            if (p1State == PLAYER_STATE_ALIVE) {
+                checkPlayerItemCollision(p1X, p1Y, 1);
+            }
+            if (p2State == PLAYER_STATE_ALIVE) {
+                checkPlayerItemCollision(p2X, p2Y, 2);
+            }
         }
         
-        // 4. 스프라이트 애니메이션 업데이트
-        updatePlayerAnimation(1);
-        updatePlayerAnimation(2);
+        // 4. 스프라이트 애니메이션 업데이트 (살아있을 때만)
+        if (p1State == PLAYER_STATE_ALIVE) {
+            updatePlayerAnimation(1);
+        }
+        if (p2State == PLAYER_STATE_ALIVE) {
+            updatePlayerAnimation(2);
+        }
         
         // 5. 폭탄 시스템 업데이트
         updateBombSystem();
@@ -687,13 +766,14 @@ public class GamePanelPlaceholder extends JPanel {
                 resultDisplayTime = System.currentTimeMillis();
             }
             
-            if (!p1Alive && p2Alive) {
+            // ⭐ 수정: Dead 상태 체크
+            if (p1State == PLAYER_STATE_DEAD && p2State != PLAYER_STATE_DEAD) {
                 gameState = STATE_P2_WIN;
                 resultDisplayTime = System.currentTimeMillis();
-            } else if (p1Alive && !p2Alive) {
+            } else if (p2State == PLAYER_STATE_DEAD && p1State != PLAYER_STATE_DEAD) {
                 gameState = STATE_P1_WIN;
                 resultDisplayTime = System.currentTimeMillis();
-            } else if (!p1Alive && !p2Alive) {
+            } else if (p1State == PLAYER_STATE_DEAD && p2State == PLAYER_STATE_DEAD) {
                 gameState = STATE_DRAW;
                 resultDisplayTime = System.currentTimeMillis();
             }
@@ -706,6 +786,8 @@ public class GamePanelPlaceholder extends JPanel {
             }
         }
     }
+    
+    
     
     
     // ===== 폭탄 시스템 업데이트 =====
@@ -873,67 +955,74 @@ public class GamePanelPlaceholder extends JPanel {
     }
     
     private void checkExplosionCollision() {
-        if (!p1Alive && !p2Alive) return;
+        if (p1State == PLAYER_STATE_DEAD && p2State == PLAYER_STATE_DEAD) return;
+        
+        long currentTime = System.currentTimeMillis();
         
         for (Explosion exp : explosions) {
             int expRow = exp.getRow();
             int expCol = exp.getCol();
             
             // 1P 충돌 확인
-            if (p1Alive) {
+            if (p1State == PLAYER_STATE_ALIVE) {
                 int p1TileRow = getTileRow(p1Y + PLAYER_SIZE / 2);
                 int p1TileCol = getTileCol(p1X + PLAYER_SIZE / 2);
                 
                 if (p1TileRow == expRow && p1TileCol == expCol) {
+                    // ⭐ Trapped 상태로 전환
+                    p1State = PLAYER_STATE_TRAPPED;
                     p1Trapped = true;
+                    p1TrappedStartTime = currentTime;
+                    System.out.println("1P Trapped!");
                 }
             }
             
             // 2P 충돌 확인
-            if (p2Alive) {
+            if (p2State == PLAYER_STATE_ALIVE) {
                 int p2TileRow = getTileRow(p2Y + PLAYER_SIZE / 2);
                 int p2TileCol = getTileCol(p2X + PLAYER_SIZE / 2);
                 
                 if (p2TileRow == expRow && p2TileCol == expCol) {
+                    // ⭐ Trapped 상태로 전환
+                    p2State = PLAYER_STATE_TRAPPED;
                     p2Trapped = true;
+                    p2TrappedStartTime = currentTime;
+                    System.out.println("2P Trapped!");
                 }
             }
         }
         
-        // Trapped 상태에서 폭발이 끝나면 사망 처리
-        if (p1Trapped) {
-            boolean stillInExplosion = false;
-            int p1TileRow = getTileRow(p1Y + PLAYER_SIZE / 2);
-            int p1TileCol = getTileCol(p1X + PLAYER_SIZE / 2);
-            
-            for (Explosion exp : explosions) {
-                if (exp.getRow() == p1TileRow && exp.getCol() == p1TileCol) {
-                    stillInExplosion = true;
-                    break;
-                }
+        // ⭐ Trapped 상태 체크 (6초 경과 시 Die 애니메이션 시작)
+        if (p1State == PLAYER_STATE_TRAPPED) {
+            if (currentTime - p1TrappedStartTime >= TRAPPED_DURATION) {
+                p1State = PLAYER_STATE_DYING;
+                p1DieStartTime = currentTime;
+                System.out.println("1P Dying...");
             }
-            
-            if (!stillInExplosion) {
+        }
+        
+        if (p2State == PLAYER_STATE_TRAPPED) {
+            if (currentTime - p2TrappedStartTime >= TRAPPED_DURATION) {
+                p2State = PLAYER_STATE_DYING;
+                p2DieStartTime = currentTime;
+                System.out.println("2P Dying...");
+            }
+        }
+        
+        // ⭐ Dying 상태 체크 (1초 경과 시 Dead 상태로 전환)
+        if (p1State == PLAYER_STATE_DYING) {
+            if (currentTime - p1DieStartTime >= DIE_ANIMATION_DURATION) {
+                p1State = PLAYER_STATE_DEAD;
                 p1Alive = false;
-                p1Trapped = false;
+                System.out.println("1P Dead!");
             }
         }
         
-        if (p2Trapped) {
-            boolean stillInExplosion = false;
-            int p2TileRow = getTileRow(p2Y + PLAYER_SIZE / 2);
-            int p2TileCol = getTileCol(p2X + PLAYER_SIZE / 2);
-            
-            for (Explosion exp : explosions) {
-                if (exp.getRow() == p2TileRow && exp.getCol() == p2TileCol) {
-                    stillInExplosion = true;
-                    break;
-                }
-            }
-            
-            if (!stillInExplosion) {
+        if (p2State == PLAYER_STATE_DYING) {
+            if (currentTime - p2DieStartTime >= DIE_ANIMATION_DURATION) {
+                p2State = PLAYER_STATE_DEAD;
                 p2Alive = false;
-                p2Trapped = false;
+                System.out.println("2P Dead!");
             }
         }
     }
@@ -970,10 +1059,19 @@ public class GamePanelPlaceholder extends JPanel {
         gameState = STATE_PLAYING;
         remainingTime = GAME_TIME;
         lastTimerUpdate = 0;
+        
         p1Alive = true;
         p2Alive = true;
         p1Trapped = false;
         p2Trapped = false;
+        
+        // ⭐ 상태 초기화
+        p1State = PLAYER_STATE_ALIVE;
+        p2State = PLAYER_STATE_ALIVE;
+        p1TrappedStartTime = 0;
+        p2TrappedStartTime = 0;
+        p1DieStartTime = 0;
+        p2DieStartTime = 0;
         
         initPlayerPositions();
         p1SpriteRow = 3;
@@ -986,7 +1084,6 @@ public class GamePanelPlaceholder extends JPanel {
         initCharacterStats();
         loadTilesFromFile();
         
-        // 폭탄 리스트 초기화
         p1Balloons.clear();
         p2Balloons.clear();
         explosions.clear();
@@ -1120,7 +1217,7 @@ public class GamePanelPlaceholder extends JPanel {
     // 물풍선 설치
     private void placeWaterBalloon(int player) {
         if (player == 1) {
-            if (!p1Alive || p1Trapped) return;
+            if (p1State != PLAYER_STATE_ALIVE) return;
             if (p1Balloons.size() >= p1BombCount) return;
             
             int p1TileRow = getTileRow(p1Y + PLAYER_SIZE / 2);
@@ -1136,7 +1233,7 @@ public class GamePanelPlaceholder extends JPanel {
             System.out.println("1P 물풍선 설치: (" + p1TileRow + ", " + p1TileCol + ")");
             
         } else if (player == 2) {
-            if (!p2Alive || p2Trapped) return;
+            if (p2State != PLAYER_STATE_ALIVE) return;
             if (p2Balloons.size() >= p2BombCount) return;
             
             int p2TileRow = getTileRow(p2Y + PLAYER_SIZE / 2);
@@ -1433,58 +1530,127 @@ public class GamePanelPlaceholder extends JPanel {
     }
     
     private void drawPlayers(Graphics2D g2) {
-        // 1P 그리기
-        if (p1Alive) {
-            if (p1Sprites != null && p1SpriteRow < SPRITE_ROWS && p1SpriteCol < SPRITE_COLS
-                && p1Sprites[p1SpriteRow] != null && p1Sprites[p1SpriteRow][p1SpriteCol] != null) {
+        long currentTime = System.currentTimeMillis();
+        
+        // ===== 1P 그리기 =====
+        if (p1State != PLAYER_STATE_DEAD) {
+            BufferedImage p1Frame = null;
+            int drawWidth = p1SpriteWidth;
+            int drawHeight = p1SpriteHeight;
+            
+            if (p1State == PLAYER_STATE_ALIVE) {
+                // 일반 상태
+                if (p1Sprites != null && p1SpriteRow < SPRITE_ROWS && p1SpriteCol < SPRITE_COLS
+                        && p1Sprites[p1SpriteRow] != null && p1Sprites[p1SpriteRow][p1SpriteCol] != null) {
+                    p1Frame = p1Sprites[p1SpriteRow][p1SpriteCol];
+                }
+            } else if (p1State == PLAYER_STATE_TRAPPED && trappedSprites != null) {
+                // ⭐ Trapped 상태 (애니메이션)
+                long elapsed = currentTime - p1TrappedStartTime;
+                int frameIndex = (int)((elapsed % 1000) * TRAPPED_SPRITE_COLS / 1000); // 1초당 8프레임
                 
-                BufferedImage p1Frame = p1Sprites[p1SpriteRow][p1SpriteCol];
-                int drawX = p1X - (p1SpriteWidth - PLAYER_SIZE) / 2;
-                int drawY = p1Y - (p1SpriteHeight - PLAYER_SIZE);
+                // 1행: 배찌, 2행: 디지니
+                int row = "배찌".equals(p1CharacterName) ? 0 : 1;
                 
-                g2.drawImage(p1Frame, drawX, drawY, p1SpriteWidth, p1SpriteHeight, null);
+                if (row < TRAPPED_SPRITE_ROWS && frameIndex < TRAPPED_SPRITE_COLS) {
+                    p1Frame = trappedSprites[row][frameIndex];
+                    drawWidth = p1Frame.getWidth();
+                    drawHeight = p1Frame.getHeight();
+                }
+            } else if (p1State == PLAYER_STATE_DYING && dieSprites != null) {
+                // ⭐ Die 애니메이션
+                long elapsed = currentTime - p1DieStartTime;
+                int frameIndex = (int)((elapsed % DIE_ANIMATION_DURATION) * DIE_SPRITE_COLS / DIE_ANIMATION_DURATION);
+                
+                // 1행: RedBazzi, 2행: BlueBazzi, 3행: RedDizni, 4행: BlueDizni
+                int row;
+                if ("배찌".equals(p1CharacterName)) {
+                    row = 0; // RedBazzi (1P는 항상 Red)
+                } else {
+                    row = 2; // RedDizni
+                }
+                
+                if (row < DIE_SPRITE_ROWS && frameIndex < DIE_SPRITE_COLS) {
+                    p1Frame = dieSprites[row][frameIndex];
+                    drawWidth = p1Frame.getWidth();
+                    drawHeight = p1Frame.getHeight();
+                }
+            }
+            
+            if (p1Frame != null) {
+                int drawX = p1X - (drawWidth - PLAYER_SIZE) / 2;
+                int drawY = p1Y - (drawHeight - PLAYER_SIZE);
+                g2.drawImage(p1Frame, drawX, drawY, drawWidth, drawHeight, null);
             } else {
+                // 기본 사각형
                 g2.setColor(Color.RED);
                 g2.fillRect(p1X, p1Y, PLAYER_SIZE, PLAYER_SIZE);
                 g2.setColor(Color.WHITE);
                 g2.setFont(new Font("Arial", Font.BOLD, 12));
                 g2.drawString("1P", p1X + 12, p1Y + 25);
             }
-            
-            // Trapped 상태 표시
-            if (p1Trapped && trappedImage != null) {
-                int drawX = p1X - (BALLOON_DRAW_SIZE - PLAYER_SIZE) / 2;
-                int drawY = p1Y - (BALLOON_DRAW_SIZE - PLAYER_SIZE) / 2;
-                g2.drawImage(trappedImage, drawX, drawY, BALLOON_DRAW_SIZE, BALLOON_DRAW_SIZE, null);
-            }
         }
         
-        // 2P 그리기
-        if (p2Alive) {
-            if (p2Sprites != null && p2SpriteRow < SPRITE_ROWS && p2SpriteCol < SPRITE_COLS
-                && p2Sprites[p2SpriteRow] != null && p2Sprites[p2SpriteRow][p2SpriteCol] != null) {
+        // ===== 2P 그리기 =====
+        if (p2State != PLAYER_STATE_DEAD) {
+            BufferedImage p2Frame = null;
+            int drawWidth = p2SpriteWidth;
+            int drawHeight = p2SpriteHeight;
+            
+            if (p2State == PLAYER_STATE_ALIVE) {
+                // 일반 상태
+                if (p2Sprites != null && p2SpriteRow < SPRITE_ROWS && p2SpriteCol < SPRITE_COLS
+                        && p2Sprites[p2SpriteRow] != null && p2Sprites[p2SpriteRow][p2SpriteCol] != null) {
+                    p2Frame = p2Sprites[p2SpriteRow][p2SpriteCol];
+                }
+            } else if (p2State == PLAYER_STATE_TRAPPED && trappedSprites != null) {
+                // ⭐ Trapped 상태 (애니메이션)
+                long elapsed = currentTime - p2TrappedStartTime;
+                int frameIndex = (int)((elapsed % 1000) * TRAPPED_SPRITE_COLS / 1000);
                 
-                BufferedImage p2Frame = p2Sprites[p2SpriteRow][p2SpriteCol];
-                int drawX = p2X - (p2SpriteWidth - PLAYER_SIZE) / 2;
-                int drawY = p2Y - (p2SpriteHeight - PLAYER_SIZE);
+                // 1행: 배찌, 2행: 디지니
+                int row = "배찌".equals(p2CharacterName) ? 0 : 1;
                 
-                g2.drawImage(p2Frame, drawX, drawY, p2SpriteWidth, p2SpriteHeight, null);
+                if (row < TRAPPED_SPRITE_ROWS && frameIndex < TRAPPED_SPRITE_COLS) {
+                    p2Frame = trappedSprites[row][frameIndex];
+                    drawWidth = p2Frame.getWidth();
+                    drawHeight = p2Frame.getHeight();
+                }
+            } else if (p2State == PLAYER_STATE_DYING && dieSprites != null) {
+                // ⭐ Die 애니메이션
+                long elapsed = currentTime - p2DieStartTime;
+                int frameIndex = (int)((elapsed % DIE_ANIMATION_DURATION) * DIE_SPRITE_COLS / DIE_ANIMATION_DURATION);
+                
+                // 1행: RedBazzi, 2행: BlueBazzi, 3행: RedDizni, 4행: BlueDizni
+                int row;
+                if ("배찌".equals(p2CharacterName)) {
+                    row = 1; // BlueBazzi (2P는 항상 Blue)
+                } else {
+                    row = 3; // BlueDizni
+                }
+                
+                if (row < DIE_SPRITE_ROWS && frameIndex < DIE_SPRITE_COLS) {
+                    p2Frame = dieSprites[row][frameIndex];
+                    drawWidth = p2Frame.getWidth();
+                    drawHeight = p2Frame.getHeight();
+                }
+            }
+            
+            if (p2Frame != null) {
+                int drawX = p2X - (drawWidth - PLAYER_SIZE) / 2;
+                int drawY = p2Y - (drawHeight - PLAYER_SIZE);
+                g2.drawImage(p2Frame, drawX, drawY, drawWidth, drawHeight, null);
             } else {
+                // 기본 사각형
                 g2.setColor(Color.BLUE);
                 g2.fillRect(p2X, p2Y, PLAYER_SIZE, PLAYER_SIZE);
                 g2.setColor(Color.WHITE);
                 g2.setFont(new Font("Arial", Font.BOLD, 12));
                 g2.drawString("2P", p2X + 12, p2Y + 25);
             }
-            
-            // Trapped 상태 표시
-            if (p2Trapped && trappedImage != null) {
-                int drawX = p2X - (BALLOON_DRAW_SIZE - PLAYER_SIZE) / 2;
-                int drawY = p2Y - (BALLOON_DRAW_SIZE - PLAYER_SIZE) / 2;
-                g2.drawImage(trappedImage, drawX, drawY, BALLOON_DRAW_SIZE, BALLOON_DRAW_SIZE, null);
-            }
         }
     }
+    
     
     private void drawPlayerBox(Graphics2D g2, int x, int y, int w, int h, String label, Image charImg, Color borderColor) {
         g2.setColor(new Color(40, 40, 40, 230));
