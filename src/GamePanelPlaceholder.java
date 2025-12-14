@@ -141,8 +141,11 @@ public class GamePanelPlaceholder extends JPanel {
     private BufferedImage[][] p2Sprites;
     private static final int SPRITE_ROWS = 4;
     private static final int SPRITE_COLS = 8;
-    private static final int SPRITE_WIDTH = 44;
-    private static final int SPRITE_HEIGHT = 62;
+    
+    private int p1SpriteWidth = 44;
+    private int p1SpriteHeight = 62;
+    private int p2SpriteWidth = 44;
+    private int p2SpriteHeight = 62;
     
     private int p1SpriteRow = 3;
     private int p1SpriteCol = 0;
@@ -297,21 +300,56 @@ public class GamePanelPlaceholder extends JPanel {
         try {
             String basePath = System.getProperty("user.dir") + File.separator + "res" + File.separator;
             
-            // 1P 스프라이트 로드
-            File p1File = new File(basePath + "BlueBazzi.png");
+            // ⭐ 1P 스프라이트 로드 (캐릭터에 따라 다른 파일)
+            String p1FileName;
+            if ("바찌".equals(p1CharacterName)) {
+                p1FileName = "RedBazzi.png";
+                p1SpriteWidth = 44;
+                p1SpriteHeight = 62;
+            } else if ("디지니".equals(p1CharacterName)) {
+                p1FileName = "RedDizni.png";
+                p1SpriteWidth = 42;
+                p1SpriteHeight = 57;
+            } else {
+                p1FileName = "RedBazzi.png"; // 기본값
+                p1SpriteWidth = 44;
+                p1SpriteHeight = 62;
+            }
+            
+            File p1File = new File(basePath + p1FileName);
             if (p1File.exists()) {
                 BufferedImage p1Sheet = ImageIO.read(p1File);
                 BufferedImage p1Transparent = makeColorTransparent(p1Sheet, 0xFF00FF);
-                p1Sprites = loadSpriteSheet(p1Transparent);
+                p1Sprites = loadSpriteSheet(p1Transparent, SPRITE_ROWS, SPRITE_COLS);
+            } else {
+                System.err.println("1P 스프라이트 파일 없음: " + p1FileName);
             }
             
-            // 2P 스프라이트 로드
-            File p2File = new File(basePath + "BlueBazzi.png");
+            // ⭐ 2P 스프라이트 로드 (캐릭터에 따라 다른 파일)
+            String p2FileName;
+            if ("바찌".equals(p2CharacterName)) {
+                p2FileName = "BlueBazzi.png";
+                p2SpriteWidth = 44;
+                p2SpriteHeight = 62;
+            } else if ("디지니".equals(p2CharacterName)) {
+                p2FileName = "BlueDizni.png";
+                p2SpriteWidth = 42;
+                p2SpriteHeight = 57;
+            } else {
+                p2FileName = "BlueBazzi.png"; // 기본값
+                p2SpriteWidth = 44;
+                p2SpriteHeight = 62;
+            }
+            
+            File p2File = new File(basePath + p2FileName);
             if (p2File.exists()) {
                 BufferedImage p2Sheet = ImageIO.read(p2File);
                 BufferedImage p2Transparent = makeColorTransparent(p2Sheet, 0xFF00FF);
-                p2Sprites = loadSpriteSheet(p2Transparent);
+                p2Sprites = loadSpriteSheet(p2Transparent, SPRITE_ROWS, SPRITE_COLS);
+            } else {
+                System.err.println("2P 스프라이트 파일 없음: " + p2FileName);
             }
+            
         } catch (IOException e) {
             System.err.println("캐릭터 스프라이트 로드 실패!");
             e.printStackTrace();
@@ -391,7 +429,7 @@ public class GamePanelPlaceholder extends JPanel {
         return dest;
     }
     
-    private BufferedImage[][] loadSpriteSheet(BufferedImage sheet) {
+    private BufferedImage[][] loadSpriteSheet(BufferedImage sheet, int rows, int cols)  {
         if (sheet == null) {
             System.err.println("스프라이트 시트가 null입니다!");
             return null;
@@ -485,6 +523,7 @@ public class GamePanelPlaceholder extends JPanel {
         loadSelectedMap();
         loadSelectedCharacters();
         loadTilesFromFile();
+        loadCharacterSprites();
         resetGame();
         p1UpPressed = p1DownPressed = p1LeftPressed = p1RightPressed = false;
         p2UpPressed = p2DownPressed = p2LeftPressed = p2RightPressed = false;
@@ -1400,10 +1439,10 @@ public class GamePanelPlaceholder extends JPanel {
                 && p1Sprites[p1SpriteRow] != null && p1Sprites[p1SpriteRow][p1SpriteCol] != null) {
                 
                 BufferedImage p1Frame = p1Sprites[p1SpriteRow][p1SpriteCol];
-                int drawX = p1X - (SPRITE_WIDTH - PLAYER_SIZE) / 2;
-                int drawY = p1Y - (SPRITE_HEIGHT - PLAYER_SIZE);
+                int drawX = p1X - (p1SpriteWidth - PLAYER_SIZE) / 2;
+                int drawY = p1Y - (p1SpriteHeight - PLAYER_SIZE);
                 
-                g2.drawImage(p1Frame, drawX, drawY, SPRITE_WIDTH, SPRITE_HEIGHT, null);
+                g2.drawImage(p1Frame, drawX, drawY, p1SpriteWidth, p1SpriteHeight, null);
             } else {
                 g2.setColor(Color.RED);
                 g2.fillRect(p1X, p1Y, PLAYER_SIZE, PLAYER_SIZE);
@@ -1426,10 +1465,10 @@ public class GamePanelPlaceholder extends JPanel {
                 && p2Sprites[p2SpriteRow] != null && p2Sprites[p2SpriteRow][p2SpriteCol] != null) {
                 
                 BufferedImage p2Frame = p2Sprites[p2SpriteRow][p2SpriteCol];
-                int drawX = p2X - (SPRITE_WIDTH - PLAYER_SIZE) / 2;
-                int drawY = p2Y - (SPRITE_HEIGHT - PLAYER_SIZE);
+                int drawX = p2X - (p2SpriteWidth - PLAYER_SIZE) / 2;
+                int drawY = p2Y - (p2SpriteHeight - PLAYER_SIZE);
                 
-                g2.drawImage(p2Frame, drawX, drawY, SPRITE_WIDTH, SPRITE_HEIGHT, null);
+                g2.drawImage(p2Frame, drawX, drawY, p2SpriteWidth, p2SpriteHeight, null);
             } else {
                 g2.setColor(Color.BLUE);
                 g2.fillRect(p2X, p2Y, PLAYER_SIZE, PLAYER_SIZE);
