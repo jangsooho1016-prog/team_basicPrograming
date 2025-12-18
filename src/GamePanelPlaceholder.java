@@ -748,7 +748,7 @@ public class GamePanelPlaceholder extends JPanel {
         
         // 5. 폭탄 시스템 업데이트
         updateBombSystem();
-        
+        checkPlayerToPlayerCollision();
         // 6. 게임 타이머 및 결과 판정
         if (gameState == STATE_PLAYING) {
             long currentTime = System.currentTimeMillis();
@@ -844,6 +844,7 @@ public class GamePanelPlaceholder extends JPanel {
     }
     
     private void createExplosion(int centerRow, int centerCol, int range) {
+        playSoundEffect("explosionBallon_less.wav");
         long startTime = System.currentTimeMillis();
         
         // 중심 폭발
@@ -1229,7 +1230,7 @@ public class GamePanelPlaceholder extends JPanel {
             long explodeTime = System.currentTimeMillis() + BALLOON_DELAY_MS;
             WaterBalloon newBalloon = new WaterBalloon(p1TileRow, p1TileCol, explodeTime, p1BombRange, 1, p1X, p1Y);
             p1Balloons.add(newBalloon);
-            
+            playSoundEffect("installationBallon.wav");
             System.out.println("1P 물풍선 설치: (" + p1TileRow + ", " + p1TileCol + ")");
             
         } else if (player == 2) {
@@ -1245,7 +1246,7 @@ public class GamePanelPlaceholder extends JPanel {
             long explodeTime = System.currentTimeMillis() + BALLOON_DELAY_MS;
             WaterBalloon newBalloon = new WaterBalloon(p2TileRow, p2TileCol, explodeTime, p2BombRange, 2, p2X, p2Y);
             p2Balloons.add(newBalloon);
-            
+            playSoundEffect("installationBallon.wav");
             System.out.println("2P 물풍선 설치: (" + p2TileRow + ", " + p2TileCol + ")");
         }
     }
@@ -1393,13 +1394,42 @@ public class GamePanelPlaceholder extends JPanel {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
+        // 배경 채우기
         g2.setColor(new Color(50, 50, 50));
         g2.fillRect(0, 0, getWidth(), getHeight());
         
+        // 맵 그리기
         drawGameMap(g2);
-        drawPlayerBox(g2, RIGHT_PANEL_X, 15, RIGHT_PANEL_WIDTH, 120, "1P", null, new Color(220, 80, 80));
+        
+        // ==========================================
+        // ⭐ 수정: 프로필용 이미지 준비 (정면 모습 사용)
+        // ==========================================
+        BufferedImage p1ProfileImg = null;
+        BufferedImage p2ProfileImg = null;
+    
+        // 1P 이미지 (3행 0열: 정면 서 있는 모습)
+        if (p1Sprites != null && p1Sprites.length > 3 && p1Sprites[3] != null) {
+            p1ProfileImg = p1Sprites[3][0]; 
+        }
+        
+        // 2P 이미지 (3행 0열: 정면 서 있는 모습)
+        if (p2Sprites != null && p2Sprites.length > 3 && p2Sprites[3] != null) {
+            p2ProfileImg = p2Sprites[3][0];
+        }
+    
+        // ==========================================
+        // ⭐ 수정: drawPlayerBox 호출 시 이미지 전달 (null -> p1ProfileImg)
+        // ==========================================
+        
+        // 1P 상자 그리기
+        drawPlayerBox(g2, RIGHT_PANEL_X, 15, RIGHT_PANEL_WIDTH, 120, "1P", p1ProfileImg, new Color(220, 80, 80));
+        
+        // 아이템 상자 등 나머지 그리기...
         drawItemBox(g2, RIGHT_PANEL_X, 145, RIGHT_PANEL_WIDTH, 100);
-        drawPlayerBox(g2, RIGHT_PANEL_X, 260, RIGHT_PANEL_WIDTH, 120, "2P", null, new Color(80, 80, 220));
+        
+        // 2P 상자 그리기 (null -> p2ProfileImg)
+        drawPlayerBox(g2, RIGHT_PANEL_X, 260, RIGHT_PANEL_WIDTH, 120, "2P", p2ProfileImg, new Color(80, 80, 220));
+        
         drawItemBox(g2, RIGHT_PANEL_X, 390, RIGHT_PANEL_WIDTH, 100);
         drawTimer(g2, RIGHT_PANEL_X, 495, RIGHT_PANEL_WIDTH, 40);
         drawExitButton(g2, RIGHT_PANEL_X, 540, RIGHT_PANEL_WIDTH, 45);
@@ -1665,7 +1695,9 @@ public class GamePanelPlaceholder extends JPanel {
         g2.drawString(label, x + 10, y + 25);
         
         if (charImg != null) {
-            g2.drawImage(charImg, x + (w - 60) / 2, y + 35, 60, 60, null);
+            // 상자 너비(w)의 중간에서 이미지 크기(60)의 절반만큼 뺌 -> 중앙 정렬
+            int imgX = x + (w - 60) / 2; 
+            g2.drawImage(charImg, imgX, y + 35, 45, 60, null);
         }
     }
     
@@ -1945,4 +1977,65 @@ public class GamePanelPlaceholder extends JPanel {
         
         return false;
     }
+    private void playSoundEffect(String soundFileName) {
+        try {
+            String soundPath = System.getProperty("user.dir") + File.separator + "sound" + File.separator + soundFileName;
+            // BGMPlayer를 사용하여 효과음 재생 (효과음은 한 번만 재생하므로 반복 없이)
+            
+            File soundFile = new File(soundPath);
+            if (soundFile.exists()) {
+                javax.sound.sampled.AudioInputStream audioInputStream = javax.sound.sampled.AudioSystem.getAudioInputStream(soundFile);
+                javax.sound.sampled.Clip clip = javax.sound.sampled.AudioSystem.getClip();
+                clip.open(audioInputStream);
+                clip.start();
+            } else {
+                System.err.println("사운드 파일 없음: " + soundFileName);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    // 캐릭터 간 충돌 확인 및 처형(Kill) 처리
+private void checkPlayerToPlayerCollision() {
+    // 둘 중 하나라도 죽었거나 없으면 체크 안 함
+    if (p1State == PLAYER_STATE_DEAD || p2State == PLAYER_STATE_DEAD) return;
+
+    // 히트박스 계산 (약간 여유를 둠)
+    Rectangle p1Bounds = new Rectangle(p1X, p1Y, PLAYER_SIZE, PLAYER_SIZE);
+    Rectangle p2Bounds = new Rectangle(p2X, p2Y, PLAYER_SIZE, PLAYER_SIZE);
+
+    // 두 캐릭터가 겹쳤는지 확인
+    if (p1Bounds.intersects(p2Bounds)) {
+        
+        // 상황 1: 1P가 갇혀있고, 2P가 살아있을 때 -> 1P 사망
+        if (p1State == PLAYER_STATE_TRAPPED && p2State == PLAYER_STATE_ALIVE) {
+            killPlayer(1);
+        }
+        
+        // 상황 2: 2P가 갇혀있고, 1P가 살아있을 때 -> 2P 사망
+        if (p2State == PLAYER_STATE_TRAPPED && p1State == PLAYER_STATE_ALIVE) {
+            killPlayer(2);
+        }
+    }
+}
+
+// 플레이어 즉시 사망 처리 (터지는 효과)
+private void killPlayer(int playerNum) {
+    long currentTime = System.currentTimeMillis();
+    
+    if (playerNum == 1) {
+        if (p1State != PLAYER_STATE_DYING && p1State != PLAYER_STATE_DEAD) {
+            p1State = PLAYER_STATE_DYING;
+            p1DieStartTime = currentTime;
+            System.out.println("1P가 터졌습니다! (접촉 사망)");
+        }
+    } else if (playerNum == 2) {
+        if (p2State != PLAYER_STATE_DYING && p2State != PLAYER_STATE_DEAD) {
+            p2State = PLAYER_STATE_DYING;
+            p2DieStartTime = currentTime;
+            System.out.println("2P가 터졌습니다! (접촉 사망)");
+        }
+    }
+}
+
 }
