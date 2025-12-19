@@ -70,7 +70,7 @@ public class CharacterSelectLobby extends JFrame {
         CharacterType p2Type = convertToCharacterType((String) p2Combo.getSelectedItem());
 
         // ✅ 1P 파란색 / 2P 빨간색은 CharacterOnlyTest 안에서 이미 고정해 둠
-        new CharacterOnlyTest(p1Type, p2Type);
+        new CrazyArcadeMain(p1Type, p2Type);
 
         // 로비 창은 닫기
         dispose();

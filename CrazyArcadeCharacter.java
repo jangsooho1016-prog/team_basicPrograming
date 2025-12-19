@@ -48,8 +48,8 @@ enum CharacterType {
     int maxBombLimit;
 
     CharacterType(Color color, String name,
-                  double baseSpeed, int baseBombRange, int baseMaxBombs,
-                  int maxSpeed, int maxRange, int maxBombLimit) {
+    double baseSpeed, int baseBombRange, int baseMaxBombs,
+    int maxSpeed, int maxRange, int maxBombLimit) {
 
         this.color = color;
         this.name = name;
@@ -281,9 +281,9 @@ class Player {
     private static final Image BLUE_DIZNI_SPRITE = new ImageIcon("BlueDizni.bmp").getImage();
 
     public Player(int x, int y, CharacterType type,
-                  int up, int down, int left, int right,
-                  int bomb, int skill,
-                  boolean isRedPlayer) {
+        int up, int down, int left, int right,
+        int bomb, int skill,
+        boolean isRedPlayer) {
         this.x = x;
         this.y = y;
         this.px = x;
